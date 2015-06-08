@@ -31,7 +31,7 @@ hash(a::Foo) = hash(a.b, hash(a.a, hash(:Foo)))
 
 Where
 
-* we use isequal because we want to match cached Inf values, etc.
+* we use `isequal()` because we want to match cached Inf values, etc.
 
 * we include the type in the hash so that different types with the same
   contents don't collide
