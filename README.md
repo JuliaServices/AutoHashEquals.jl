@@ -63,3 +63,13 @@ of all the fields.  Similarly, equality is often defined as equality of all
 fields.
 
 This macro automates this common approach.
+
+## Don't Forget
+
+You need
+
+```julia
+import Base.hash
+```
+
+so that the new methods created by the macro are added to the correct function.
