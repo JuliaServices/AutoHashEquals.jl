@@ -43,9 +43,9 @@ Where
 Julia has two composite types: *value* types, defined with `immutable` and
 *record* types, defined with `type`.
 
-Value types are intended for reasonably compact, immutable objects.  They are
-stored on the stack, passed by value, and the default hash and equality are
-based on the literal bits in memory.
+Value types are intended for compact, immutable objects.  They are stored on
+the stack, passed by value, and the default hash and equality are based on the
+literal bits in memory.
 
 Record types are allocated on the heap, are passed by reference, and the
 default hash and equality are based on the pointer value.
