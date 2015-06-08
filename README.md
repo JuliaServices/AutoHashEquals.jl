@@ -41,7 +41,7 @@ Where
 
 ## Background
 
-Julia has two composite types: *value* types, defined with `immutable` and
+Julia has two composite types: *value* types, defined with `immutable`, and
 *record* types, defined with `type`.
 
 Value types are intended for compact, immutable objects.  They are stored on
