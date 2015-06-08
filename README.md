@@ -11,6 +11,7 @@ blocks).
 For example:
 
 ```julia
+import Base.hash
 
 @auto type Foo
     a::Int
