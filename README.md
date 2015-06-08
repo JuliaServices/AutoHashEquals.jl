@@ -48,7 +48,7 @@ the stack, passed by value, and the default hash and equality are based on the
 literal bits in memory.
 
 Record types are allocated on the heap, are passed by reference, and the
-default hash and equality are based on the pointer value.
+default hash and equality are based on the pointer value (the data address).
 
 When you embed a record type in a value type, then the pointer to the record
 type becomes part of the value type, and so is included in equality and hash.
