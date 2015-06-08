@@ -36,7 +36,7 @@ Where
 * we include the type in the hash so that different types with the same
   contents don't collide
 
-* the type and `true` make it simple to generate code for empty types
+* the type and `true` make it simple to generate code for empty records
 
 ## Background
 
