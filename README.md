@@ -43,9 +43,9 @@ Where
 Julia has two composite types: *value* types, defined with `immutable` and
 *record* types, defined with `type`.
 
-Value types are intended for reasonably compact, immutable types.  They are
-passed by value, and the default hash and equality are based on the literal
-bits in memory.
+Value types are intended for reasonably compact, immutable objects.  They are
+stored on the stack, passed by value, and the default hash and equality are
+based on the literal bits in memory.
 
 Record types are allocated on the heap, are passed by reference, and the
 default hash and equality are based on the pointer value.
@@ -55,10 +55,10 @@ type becomes part of the value type, and so is included in equality and hash.
 
 Given the above, it is often necessary to define hash and equality for
 composite types.  Particularly when record types are used (directly, or in a
-value type) and reords with the same contents are semantically equal.
+value type), and when records with the same contents are semantically equal.
 
 A common way to do this is to define the hash as a combination of the hashes
-of all thefields.  Similarly, equality is often defined as equality of all
+of all the fields.  Similarly, equality is often defined as equality of all
 fields.
 
 This macro automates this common approach.
