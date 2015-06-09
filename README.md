@@ -11,9 +11,7 @@ blocks).
 For example:
 
 ```julia
-import Base.hash
-
-@auto type Foo
+@auto_hash_equals type Foo
     a::Int
     b
 end
@@ -26,7 +24,7 @@ type Foo
     a::Int
     b
 end
-hash(a::Foo) = hash(a.b, hash(a.a, hash(:Foo)))
+Base.hash(a::Foo) = hash(a.b, hash(a.a, hash(:Foo)))
 ==(a::Foo, b::Foo) = isequal(a.b, b.b) && isequal(a.a, b.a) && true
 ```
 
@@ -38,6 +36,9 @@ Where
   contents don't collide
 
 * the type and `true` make it simple to generate code for empty records
+
+* the `Base` module is explicitly used in `Base.hash` so that you don't
+  need to import it
 
 ## Background
 
@@ -63,13 +64,3 @@ of all the fields.  Similarly, equality is often defined as equality of all
 fields.
 
 This macro automates this common approach.
-
-## Don't Forget
-
-You need
-
-```julia
-import Base.hash
-```
-
-so that the new methods created by the macro are added to the correct function.

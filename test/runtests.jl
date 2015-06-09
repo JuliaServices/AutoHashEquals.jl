@@ -2,9 +2,7 @@
 using AutoHashEquals
 using Base.Test
 
-import Base.hash   # needed because the macro overrides
-
-@auto type A 
+@auto_hash_equals type A 
     a::Int
     b
 end
@@ -15,8 +13,8 @@ end
 @test A(1,2) != A(3,2)
 
 abstract B
-@auto immutable C<:B x::Int end
-@auto immutable D<:B x::Int end
+@auto_hash_equals immutable C<:B x::Int end
+@auto_hash_equals immutable D<:B x::Int end
 @test isa(C(1), B)
 @test isa(D(1), B)
 @test C(1) != D(1)
@@ -26,8 +24,8 @@ abstract B
 
 if VERSION < v"0.4-" typealias Void Nothing end
 abstract E{N<:Union(Void,Int)}
-@auto type F{N}<:E{N} e::N end
-@auto type G{N}<:E{N}
+@auto_hash_equals type F{N}<:E{N} e::N end
+@auto_hash_equals type G{N}<:E{N}
     e::N 
 end
 G() = G{Void}(nothing)
@@ -43,7 +41,7 @@ macro dummy(x)
 end
 @test @dummy(1) == 1
 
-@auto type H
+@auto_hash_equals type H
     @dummy h
     i
     @dummy j::Int
@@ -53,4 +51,4 @@ end
 @test hash(H(1,2,3)) == hash(H(1,2,3))
 @test hash(H(1,2,3)) != hash(H(2,1,3))
 
-
+println("ok")

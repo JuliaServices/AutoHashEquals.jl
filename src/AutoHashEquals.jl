@@ -1,7 +1,7 @@
 
 module AutoHashEquals
 
-export @auto
+export @auto_hash_equals
 
 
 function auto_hash(name, names)
@@ -15,7 +15,7 @@ function auto_hash(name, names)
     end
 
     quote
-        function hash(a::$(name)) 
+        function Base.hash(a::$(name)) 
             $(expand(length(names)))
         end
     end
@@ -60,7 +60,7 @@ function unpack_name(node::Expr)
 end
 
 
-macro auto(typ)
+macro auto_hash_equals(typ)
 
     @assert typ.head == :type
     name = unpack_name(typ)
