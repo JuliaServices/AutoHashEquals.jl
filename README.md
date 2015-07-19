@@ -67,10 +67,10 @@ This macro automates this common approach.
 
 ## Warning
 
-If you use this macro for a mutable type, then hash depends on the contents
-of that type, so changing the contents changes the hash.  Such types should
-not be stored in a hash table (Dict) and then mutated, because the objects
-will be "lost" (as the hash table *assumes* that hash is constant).
+If you use this macro for a mutable type, then the hash depends on the
+contents of that type, so changing the contents changes the hash.  Such types
+should not be stored in a hash table (Dict) and then mutated, because the 
+objects will be "lost" (as the hash table *assumes* that hash is constant).
 
 More generally, **this macro is only useful for mutable types when they are
 used as *immutable* records**.
