@@ -49,9 +49,11 @@ function unpack_name(node::Expr)
         unpack_name(node.args[2])
     else
         i = node.head == :type ? 2 : 1   # skip mutable flag
-        if length(node.args) > 0 && isa(node.args[i], Symbol)
+        if length(node.args) >= i && isa(node.args[i], Symbol)
             node.args[i]
-        elseif length(node.args) > 0 && isa(node.args[i], Expr) && node.args[i].head in (:(<:), :(::))
+        elseif length(node.args) >= i && isa(node.args[i], Expr) && node.args[i].head in (:(<:), :(::))
+            unpack_name(node.args[i].args[1])
+        elseif length(node.args) >= i && isa(node.args[i], Expr) && node.args[i].head == :curly
             unpack_name(node.args[i].args[1])
         else
             throw(UnpackException("cannot find name in $(node)"))
