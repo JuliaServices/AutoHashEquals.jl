@@ -3,7 +3,6 @@ using AutoHashEquals
 using Base.Markdown: plain
 using Base.Test
 using Compat
-import Base.==
 
 function sausage(x)
     buf = IOBuffer()
@@ -69,8 +68,8 @@ end
     a::A
     b::B
 end
-@compat @test I{AbstractString,Int}("a", 1) == I{AbstractString,Int}("a", 1)
-@compat @test I{AbstractString,Int}("a", 1) == sausage(I{AbstractString,Int}("a", 1))
+@test I{AbstractString,Int}("a", 1) == I{AbstractString,Int}("a", 1)
+@test I{AbstractString,Int}("a", 1) == sausage(I{AbstractString,Int}("a", 1))
 
 if VERSION >= v"0.4.0"
     @doc """this is my data type""" ->

@@ -32,7 +32,7 @@ function auto_equals(name, names)
     end
 
     quote
-        function ==(a::$(name), b::$(name)) 
+        function Base.(:(==))(a::$(name), b::$(name)) 
             $(expand(length(names)))
         end
     end

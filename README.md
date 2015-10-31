@@ -25,7 +25,7 @@ type Foo
     b
 end
 Base.hash(a::Foo) = hash(a.b, hash(a.a, hash(:Foo)))
-==(a::Foo, b::Foo) = isequal(a.b, b.b) && isequal(a.a, b.a) && true
+Base.(:(==))(a::Foo, b::Foo) = isequal(a.b, b.b) && isequal(a.a, b.a) && true
 ```
 
 Where
@@ -74,3 +74,7 @@ objects will be "lost" (as the hash table *assumes* that hash is constant).
 
 More generally, **this macro is only useful for mutable types when they are
 used as *immutable* records**.
+
+## Credits
+
+Thanks to Michael Hatherly on julia-users and Yichao Yu.
