@@ -37,8 +37,8 @@ Where
 
 * the type and `true` make it simple to generate code for empty records
 
-* the `Base` module is explicitly used in `Base.hash` so that you don't
-  need to import it
+* the `Base` module is explicitly used so that you don't need to
+  import it
 
 ## Background
 
