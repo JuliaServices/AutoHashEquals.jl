@@ -1,6 +1,8 @@
+#
 
 using AutoHashEquals
 using Base.Test
+using Compat
 
 function sausage(x)
     buf = IOBuffer()
@@ -9,7 +11,7 @@ function sausage(x)
     deserialize(buf)
 end
 
-@auto_hash_equals type A 
+@auto_hash_equals type A
     a::Int
     b
 end
@@ -32,10 +34,10 @@ abstract B
 @test hash(C(1)) == hash(C(1))
 
 if VERSION < v"0.4-" typealias Void Nothing end
-abstract E{N<:Union(Void,Int)}
+@compat abstract E{N<:Union{Void,Int}}
 @auto_hash_equals type F{N}<:E{N} e::N end
 @auto_hash_equals type G{N}<:E{N}
-    e::N 
+    e::N
 end
 G() = G{Void}(nothing)
 @test hash(F(1)) == hash(1, hash(:F))
@@ -66,7 +68,7 @@ end
     a::A
     b::B
 end
-@test I{String,Int}("a", 1) == I{String,Int}("a", 1)
-@test I{String,Int}("a", 1) == sausage(I{String,Int}("a", 1))
+@test I{AbstractString,Int}("a", 1) == I{AbstractString,Int}("a", 1)
+@test I{AbstractString,Int}("a", 1) == sausage(I{AbstractString,Int}("a", 1))
 
 println("ok")
