@@ -1,3 +1,4 @@
+#
 
 module AutoHashEquals
 
@@ -15,7 +16,7 @@ function auto_hash(name, names)
     end
 
     quote
-        function Base.hash(a::$(name)) 
+        function Base.hash(a::$(name))
             $(expand(length(names)))
         end
     end
@@ -32,13 +33,13 @@ function auto_equals(name, names)
     end
 
     quote
-        function ==(a::$(name), b::$(name)) 
+        function Base.(:(==))(a::$(name), b::$(name))
             $(expand(length(names)))
         end
     end
 end
 
-type UnpackException <: Exception 
+type UnpackException <: Exception
     msg
 end
 
