@@ -78,7 +78,7 @@ macro auto_hash_equals(typ)
     @assert length(names) > 0
 
     quote
-        $(esc(typ))
+        VERSION >= v"0.4.0" ? Base.@__doc__($(esc(typ))) : $(esc(typ))
         $(esc(auto_hash(name, names)))
         $(esc(auto_equals(name, names)))
     end

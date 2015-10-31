@@ -1,6 +1,9 @@
 
 using AutoHashEquals
+using Base.Markdown: plain
 using Base.Test
+using Compat
+import Base.==
 
 function sausage(x)
     buf = IOBuffer()
@@ -32,7 +35,7 @@ abstract B
 @test hash(C(1)) == hash(C(1))
 
 if VERSION < v"0.4-" typealias Void Nothing end
-abstract E{N<:Union(Void,Int)}
+@compat abstract E{N<:Union{Void,Int}}
 @auto_hash_equals type F{N}<:E{N} e::N end
 @auto_hash_equals type G{N}<:E{N}
     e::N 
@@ -66,7 +69,15 @@ end
     a::A
     b::B
 end
-@test I{String,Int}("a", 1) == I{String,Int}("a", 1)
-@test I{String,Int}("a", 1) == sausage(I{String,Int}("a", 1))
+@compat @test I{AbstractString,Int}("a", 1) == I{AbstractString,Int}("a", 1)
+@compat @test I{AbstractString,Int}("a", 1) == sausage(I{AbstractString,Int}("a", 1))
+
+if VERSION >= v"0.4.0"
+    @doc """this is my data type""" ->
+    @auto_hash_equals type MyType
+        field::Int
+    end
+    @test plain(@doc MyType) == "this is my data type\n"
+end
 
 println("ok")
