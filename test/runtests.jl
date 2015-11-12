@@ -1,8 +1,8 @@
 
 using AutoHashEquals
-using Base.Markdown: plain
 using Base.Test
 using Compat
+VERSION >= v"0.4" && using Base.Markdown: plain
 
 function sausage(x)
     buf = IOBuffer()
@@ -71,7 +71,14 @@ end
 @test I{AbstractString,Int}("a", 1) == I{AbstractString,Int}("a", 1)
 @test I{AbstractString,Int}("a", 1) == sausage(I{AbstractString,Int}("a", 1))
 
-if VERSION >= v"0.4.0"
+macro cond(test, block)
+    if eval(test)
+        block
+    end
+end
+
+@cond VERSION >= v"0.4" begin
+    println("0.4 specific doc test")
     @doc """this is my data type""" ->
     @auto_hash_equals type MyType
         field::Int
