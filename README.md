@@ -24,7 +24,7 @@ type Foo
     a::Int
     b
 end
-Base.hash(a::Foo) = hash(a.b, hash(a.a, hash(:Foo)))
+Base.hash(a::Foo, h::UInt) = hash(a.b, hash(a.a, hash(:Foo, h)))
 Base.(:(==))(a::Foo, b::Foo) = isequal(a.b, b.b) && isequal(a.a, b.a) && true
 ```
 

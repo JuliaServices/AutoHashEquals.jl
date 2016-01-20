@@ -8,14 +8,14 @@ function auto_hash(name, names)
 
     function expand(i)
         if i == 0
-            :(hash($(QuoteNode(name))))
+            :(hash($(QuoteNode(name)), h))
         else
             :(hash(a.$(names[i]), $(expand(i-1))))
         end
     end
 
     quote
-        function Base.hash(a::$(name)) 
+        function Base.hash(a::$(name), h::UInt) 
             $(expand(length(names)))
         end
     end
