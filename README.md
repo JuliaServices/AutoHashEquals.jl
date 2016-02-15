@@ -1,7 +1,9 @@
-[![Build
-Status](https://travis-ci.org/andrewcooke/AutoHashEquals.jl.png)](https://travis-ci.org/andrewcooke/AutoHashEquals.jl)
+[![Build Status](https://travis-ci.org/andrewcooke/AutoHashEquals.jl.png)](https://travis-ci.org/andrewcooke/AutoHashEquals.jl)
 [![Coverage Status](https://coveralls.io/repos/andrewcooke/AutoHashEquals.jl/badge.svg)](https://coveralls.io/r/andrewcooke/AutoHashEquals.jl)
-[![AutoHashEquals](http://pkg.julialang.org/badges/AutoHashEquals_release.svg)](http://pkg.julialang.org/?pkg=AutoHashEquals&ver=release)
+
+[![AutoHashEquals](http://pkg.julialang.org/badges/AutoHashEquals_0.3.svg)](http://pkg.julialang.org/?pkg=AutoHashEquals&ver=0.3)
+[![AutoHashEquals](http://pkg.julialang.org/badges/AutoHashEquals_0.4.svg)](http://pkg.julialang.org/?pkg=AutoHashEquals&ver=0.4)
+[![AutoHashEquals](http://pkg.julialang.org/badges/AutoHashEquals_0.5.svg)](http://pkg.julialang.org/?pkg=AutoHashEquals&ver=0.5)
 
 # AutoHashEquals
 
