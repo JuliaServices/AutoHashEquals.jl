@@ -31,9 +31,17 @@ function auto_equals(name, names)
         end
     end
 
-    quote
-        function Base.(:(==))(a::$(name), b::$(name)) 
-            $(expand(length(names)))
+    if VERSION < v"0.5-pre"
+        quote
+            function Base.(:(==))(a::$(name), b::$(name))
+                $(expand(length(names)))
+            end
+        end
+    else
+        quote
+            function Base.:(==)(a::$(name), b::$(name))
+                $(expand(length(names)))
+            end
         end
     end
 end
