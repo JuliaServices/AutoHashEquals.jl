@@ -67,7 +67,7 @@ fields.
 
 This macro automates this common approach.
 
-## Warning
+## Warnings
 
 If you use this macro for a mutable type, then the hash depends on the
 contents of that type, so changing the contents changes the hash.  Such types
@@ -76,6 +76,8 @@ objects will be "lost" (as the hash table *assumes* that hash is constant).
 
 More generally, **this macro is only useful for mutable types when they are
 used as *immutable* records**.
+
+Support for inline documentation is broken in 0.5 (see failing test).
 
 ## Credits
 
