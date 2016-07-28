@@ -1,3 +1,4 @@
+VERSION >= v"0.4" && __precompile__(true)
 
 module AutoHashEquals
 

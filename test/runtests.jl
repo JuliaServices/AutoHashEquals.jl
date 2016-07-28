@@ -77,13 +77,22 @@ macro cond(test, block)
     end
 end
 
-@cond VERSION >= v"0.4" begin
+@cond VERSION >= v"0.4" && VERSION < v"0.5-" begin
     println("0.4 specific doc test")
     @doc """this is my data type""" ->
     @auto_hash_equals type MyType
         field::Int
     end
     @test plain(@doc MyType) == "this is my data type\n"
+end
+
+@cond VERSION >= v"0.5-pre" begin
+    println("0.5 specific doc test")
+    """this is my data type"""
+    @auto_hash_equals type MyType
+        field::Int
+    end
+    @test_broken plain(@doc MyType) == "this is my data type\n"
 end
 
 println("ok")
