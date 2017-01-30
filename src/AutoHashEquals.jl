@@ -67,7 +67,7 @@ macro auto_hash_equals(typ)
     @assert typ.head == :type
     name = unpack_name(typ)
 
-    names = Array(Symbol,0)
+    names = Vector{Symbol}()
     for field in typ.args[3].args
         try
             push!(names, unpack_name(field))
