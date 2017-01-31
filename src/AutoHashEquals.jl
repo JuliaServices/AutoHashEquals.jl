@@ -1,5 +1,4 @@
-VERSION >= v"0.4" && __precompile__(true)
-
+ __precompile__(true)
 module AutoHashEquals
 
 export @auto_hash_equals
@@ -16,7 +15,7 @@ function auto_hash(name, names)
     end
 
     quote
-        function Base.hash(a::$(name), h::UInt) 
+        function Base.hash(a::$(name), h::UInt)
             $(expand(length(names)))
         end
     end
@@ -32,22 +31,14 @@ function auto_equals(name, names)
         end
     end
 
-    if VERSION < v"0.5-pre"
-        quote
-            function Base.(:(==))(a::$(name), b::$(name))
-                $(expand(length(names)))
-            end
-        end
-    else
-        quote
-            function Base.:(==)(a::$(name), b::$(name))
-                $(expand(length(names)))
-            end
+    quote
+        function Base.:(==)(a::$(name), b::$(name))
+            $(expand(length(names)))
         end
     end
 end
 
-type UnpackException <: Exception 
+type UnpackException <: Exception
     msg
 end
 
@@ -76,7 +67,7 @@ macro auto_hash_equals(typ)
     @assert typ.head == :type
     name = unpack_name(typ)
 
-    names = Array(Symbol,0)
+    names = Vector{Symbol}()
     for field in typ.args[3].args
         try
             push!(names, unpack_name(field))
@@ -86,18 +77,10 @@ macro auto_hash_equals(typ)
     end
     @assert length(names) > 0
 
-    if VERSION < v"0.4"
-        quote
-            $(esc(typ))
-            $(esc(auto_hash(name, names)))
-            $(esc(auto_equals(name, names)))
-        end
-    else
-        quote
-            Base.@__doc__($(esc(typ)))
-            $(esc(auto_hash(name, names)))
-            $(esc(auto_equals(name, names)))
-        end
+    quote
+        Base.@__doc__($(esc(typ)))
+        $(esc(auto_hash(name, names)))
+        $(esc(auto_equals(name, names)))
     end
 end
 

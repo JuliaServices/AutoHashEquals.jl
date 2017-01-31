@@ -1,8 +1,7 @@
-
+include("../src/AutoHashEquals.jl")
 using AutoHashEquals
 using Base.Test
-using Compat
-VERSION >= v"0.4" && using Base.Markdown: plain
+using Base.Markdown: plain
 
 function sausage(x)
     buf = IOBuffer()
@@ -11,7 +10,7 @@ function sausage(x)
     deserialize(buf)
 end
 
-@auto_hash_equals type A 
+@auto_hash_equals type A
     a::Int
     b
 end
@@ -33,11 +32,10 @@ abstract B
 @test C(1) == sausage(C(1))
 @test hash(C(1)) == hash(C(1))
 
-if VERSION < v"0.4-" typealias Void Nothing end
-@compat abstract E{N<:Union{Void,Int}}
+abstract E{N<:Union{Void,Int}}
 @auto_hash_equals type F{N}<:E{N} e::N end
 @auto_hash_equals type G{N}<:E{N}
-    e::N 
+    e::N
 end
 G() = G{Void}(nothing)
 @test hash(F(1)) == hash(1, hash(:F))
@@ -49,7 +47,7 @@ G() = G{Void}(nothing)
 @test G() == G()
 
 macro dummy(x)
-    x
+    esc(x)
 end
 @test @dummy(1) == 1
 
@@ -77,22 +75,10 @@ macro cond(test, block)
     end
 end
 
-@cond VERSION >= v"0.4" && VERSION < v"0.5-" begin
-    println("0.4 specific doc test")
-    @doc """this is my data type""" ->
-    @auto_hash_equals type MyType
-        field::Int
-    end
-    @test plain(@doc MyType) == "this is my data type\n"
+"""this is my data type"""
+@auto_hash_equals type MyType
+    field::Int
 end
-
-@cond VERSION >= v"0.5-pre" begin
-    println("0.5 specific doc test")
-    """this is my data type"""
-    @auto_hash_equals type MyType
-        field::Int
-    end
-    @test_broken plain(@doc MyType) == "this is my data type\n"
-end
+@test plain(@doc MyType) == "this is my data type\n"
 
 println("ok")
