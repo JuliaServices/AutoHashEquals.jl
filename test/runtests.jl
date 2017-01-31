@@ -47,7 +47,7 @@ G() = G{Void}(nothing)
 @test G() == G()
 
 macro dummy(x)
-    x
+    esc(x)
 end
 @test @dummy(1) == 1
 

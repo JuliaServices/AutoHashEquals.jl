@@ -79,4 +79,4 @@ used as *immutable* records**.
 
 ## Credits
 
-Thanks to Michael Hatherly on julia-users and Yichao Yu.
+Thanks to Michael Hatherly, Yichao Yu, and Carlo Lucibello.
