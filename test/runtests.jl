@@ -1,4 +1,4 @@
-include("../src/AutoHashEquals.jl")
+
 using AutoHashEquals
 using Base.Test
 using Base.Markdown: plain
