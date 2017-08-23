@@ -7,13 +7,13 @@
 
 # AutoHashEquals
 
-A macro to add == and hash() to composite types (ie type and immutable
+A macro to add == and hash() to composite types (ie struct and mutable struct
 blocks).
 
 For example:
 
 ```julia
-@auto_hash_equals type Foo
+@auto_hash_equals mutable struct Foo
     a::Int
     b
 end
@@ -22,7 +22,7 @@ end
 becomes
 
 ```julia
-type Foo
+mutable struct Foo
     a::Int
     b
 end
@@ -44,8 +44,8 @@ Where
 
 ## Background
 
-Julia has two composite types: *value* types, defined with `immutable`, and
-*record* types, defined with `type`.
+Julia has two composite types: *value* types, defined with `struct`, and
+*record* types, defined with `mutable struct`.
 
 Value types are intended for compact, immutable objects.  They are stored on
 the stack, passed by value, and the default hash and equality are based on the
@@ -69,7 +69,7 @@ This macro automates this common approach.
 
 ## Warnings
 
-If you use this macro for a mutable type, then the hash depends on the
+If you use this macro for a mutable types, then the hash depends on the
 contents of that type, so changing the contents changes the hash.  Such types
 should not be stored in a hash table (Dict) and then mutated, because the
 objects will be "lost" (as the hash table *assumes* that hash is constant).
