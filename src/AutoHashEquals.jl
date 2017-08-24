@@ -48,7 +48,7 @@ function unpack_name(node::Expr)
     if node.head == :macrocall
         unpack_name(node.args[2])
     else
-        i = node.head == :type ? 2 : 1   # skip mutable flag
+        i = node.head == :type || node.head == :struct ? 2 : 1   # skip mutable flag
         if length(node.args) >= i && isa(node.args[i], Symbol)
             node.args[i]
         elseif length(node.args) >= i && isa(node.args[i], Expr) && node.args[i].head in (:(<:), :(::))
@@ -64,7 +64,7 @@ end
 
 macro auto_hash_equals(typ)
 
-    @assert typ.head == :type
+    @assert typ.head == :type || typ.head == :struct
     name = unpack_name(typ)
 
     names = Vector{Symbol}()
