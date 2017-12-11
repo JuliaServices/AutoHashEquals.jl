@@ -38,7 +38,7 @@ function auto_equals(name, names)
     end
 end
 
-type UnpackException <: Exception
+struct UnpackException <: Exception
     msg
 end
 
