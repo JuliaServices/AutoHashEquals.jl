@@ -10,7 +10,7 @@ function sausage(x)
     deserialize(buf)
 end
 
-@auto_hash_equals type A
+@auto_hash_equals struct A
     a::Int
     b
 end
@@ -21,9 +21,9 @@ end
 @test A(1,2) != A(1,3)
 @test A(1,2) != A(3,2)
 
-abstract B
-@auto_hash_equals immutable C<:B x::Int end
-@auto_hash_equals immutable D<:B x::Int end
+abstract type B end
+@auto_hash_equals struct C<:B x::Int end
+@auto_hash_equals struct D<:B x::Int end
 @test isa(C(1), B)
 @test isa(D(1), B)
 @test C(1) != D(1)
@@ -32,9 +32,9 @@ abstract B
 @test C(1) == sausage(C(1))
 @test hash(C(1)) == hash(C(1))
 
-abstract E{N<:Union{Void,Int}}
-@auto_hash_equals type F{N}<:E{N} e::N end
-@auto_hash_equals type G{N}<:E{N}
+abstract type E{N<:Union{Void,Int}} end
+@auto_hash_equals mutable struct F{N}<:E{N} e::N end
+@auto_hash_equals mutable struct G{N}<:E{N}
     e::N
 end
 G() = G{Void}(nothing)
@@ -51,7 +51,7 @@ macro dummy(x)
 end
 @test @dummy(1) == 1
 
-@auto_hash_equals type H
+@auto_hash_equals mutable struct H
     @dummy h
     i
     @dummy j::Int
@@ -62,7 +62,7 @@ end
 @test hash(H(1,2,3)) == hash(H(1,2,3))
 @test hash(H(1,2,3)) != hash(H(2,1,3))
 
-@auto_hash_equals immutable I{A,B}
+@auto_hash_equals struct I{A,B}
     a::A
     b::B
 end
@@ -76,7 +76,7 @@ macro cond(test, block)
 end
 
 """this is my data type"""
-@auto_hash_equals type MyType
+@auto_hash_equals mutable struct MyType
     field::Int
 end
 @test plain(@doc MyType) == "this is my data type\n"
