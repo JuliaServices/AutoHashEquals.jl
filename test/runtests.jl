@@ -1,7 +1,18 @@
 
 using AutoHashEquals
-using Base.Test
-using Base.Markdown: plain
+
+@static if !isdefined(Base, :Nothing)
+    const Nothing = Void
+end
+
+@static if VERSION >= v"0.7"
+    using Test
+    using Serialization
+    using Markdown: plain
+else
+    using Base.Test
+    using Base.Markdown: plain
+end
 
 function sausage(x)
     buf = IOBuffer()
@@ -32,12 +43,12 @@ abstract type B end
 @test C(1) == sausage(C(1))
 @test hash(C(1)) == hash(C(1))
 
-abstract type E{N<:Union{Void,Int}} end
+abstract type E{N<:Union{Nothing,Int}} end
 @auto_hash_equals mutable struct F{N}<:E{N} e::N end
 @auto_hash_equals mutable struct G{N}<:E{N}
     e::N
 end
-G() = G{Void}(nothing)
+G() = G{Nothing}(nothing)
 @test hash(F(1)) == hash(1, hash(:F))
 @test hash(F(1)) != hash(F(2))
 @test F(1) == F(1)
