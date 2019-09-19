@@ -92,4 +92,11 @@ end
 end
 @test plain(@doc MyType) == "this is my data type\n"
 
+@auto_hash_equals struct J end
+@auto_hash_equals struct K end
+
+@test J() == J()
+@test hash(J()) == hash(J())
+@test hash(J()) != hash(K())
+
 println("ok")

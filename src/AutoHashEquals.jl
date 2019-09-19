@@ -76,7 +76,6 @@ macro auto_hash_equals(typ)
             # not a field
         end
     end
-    @assert length(names) > 0
 
     quote
         Base.@__doc__($(esc(typ)))
