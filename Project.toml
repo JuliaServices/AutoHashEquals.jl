@@ -1,6 +1,6 @@
 name = "AutoHashEquals"
 uuid = "97026771-8bcd-44fb-b7eb-f644370d63d3"
-authors = []
+authors = ["andrew cooke <andrew@acooke.org>"]
 version = "0.3.0"
 
 [compat]
