@@ -3,9 +3,8 @@ os:
   - linux
   - osx
 julia:
-  - 0.6
-  - 0.7
   - 1.0
+  - 1
   - nightly
 notifications:
   email: false
@@ -14,4 +13,4 @@ notifications:
 #  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 #  - julia --check-bounds=yes -e 'VERSION >= v"0.7-" && import Pkg; Pkg.clone(pwd()); Pkg.build("AutoHashEquals"); Pkg.test("AutoHashEquals"; coverage=true)'
 after_success:
-- julia -e 'VERSION >= v"0.7-" && import Pkg; cd(Pkg.dir("AutoHashEquals")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+- julia -e 'import Pkg; cd(Pkg.dir("AutoHashEquals")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
