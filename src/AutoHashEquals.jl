@@ -62,8 +62,45 @@ function unpack_name(node::Expr)
     end
 end
 
+struct_from_doc_struct_block(_e, _m) = nothing
+function struct_from_doc_struct_block(e::Expr, meta_idx)
+    i = meta_idx
+    if length(e.args) >= i+1 && e.args[i+1] isa Expr && e.args[i+1].head == :struct
+        return e.args[i+1]
+    elseif length(e.args) >= i+2 && e.args[i+2] isa Expr && e.args[i+2].head == :struct
+        return e.args[i+2]
+    end
+    return nothing
+end
+
+find_doc_struct_block(e) = nothing
+function find_doc_struct_block(e::Expr)
+    if e.head == :block
+        for (i,arg) in enumerate(e.args)
+            if arg == :($(Expr(:meta, :doc)))
+                s = struct_from_doc_struct_block(e, i)
+                # There can only be one @doc expression in a block, so if this
+                # isn't the struct, there won't be one.
+                return s  # might be nothing
+            else
+                s = find_doc_struct_block(arg)
+                if s != nothing
+                    return s
+                end
+            end
+        end
+    end
+    return nothing
+end
 
 macro auto_hash_equals(typ)
+    typ.head == :macrocall && (typ = Base.macroexpand(__module__, typ))
+
+    orig_typ = typ
+    
+    if typ.head == :block
+        typ = find_doc_struct_block(typ)
+    end
 
     @assert typ.head == :type || typ.head == :struct
     name = unpack_name(typ)
@@ -79,7 +116,7 @@ macro auto_hash_equals(typ)
     @assert length(names) > 0
 
     quote
-        Base.@__doc__($(esc(typ)))
+        Base.@__doc__($(esc(orig_typ)))
         $(esc(auto_hash(name, names)))
         $(esc(auto_equals(name, names)))
     end

@@ -92,4 +92,18 @@ end
 end
 @test plain(@doc MyType) == "this is my data type\n"
 
+# Interactions with other struct-level macros
+
+@auto_hash_equals Base.@kwdef struct J
+    a = 1
+    b = []
+end
+@test J() == J() == J(b=[])
+@test J(a=1, b=[2]) == J(a=1, b=[2])
+
+@auto_hash_equals @auto_hash_equals struct H
+   x 
+end
+@test H([]) == H([])
+
 println("ok")
