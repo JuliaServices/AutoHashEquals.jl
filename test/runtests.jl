@@ -80,6 +80,12 @@ end
 @test I{AbstractString,Int}("a", 1) == I{AbstractString,Int}("a", 1)
 @test I{AbstractString,Int}("a", 1) == sausage(I{AbstractString,Int}("a", 1))
 
+@test isequal(I(NaN, nothing), I(NaN, nothing))
+@test (I(NaN, nothing) != I(NaN, nothing))
+
+@test isequal(I(missing, nothing), I(missing, nothing))
+@test missing === (I(missing, nothing) == I(missing, nothing))
+
 macro cond(test, block)
     if eval(test)
         block
