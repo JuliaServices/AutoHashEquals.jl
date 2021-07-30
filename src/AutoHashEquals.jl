@@ -24,17 +24,21 @@ end
 
 function auto_equals(name, names)
 
-    function expand(i)
+    function expand(eq, i)
         if i == 0
             :true
         else
-            :(isequal(a.$(names[i]), b.$(names[i])) && $(expand(i-1)))
+            :($(eq)(a.$(names[i]), b.$(names[i])) && $(expand(eq, i-1)))
         end
     end
 
     quote
         function Base.:(==)(a::$(name), b::$(name))
-            $(expand(length(names)))
+            $(expand(==, length(names)))
+        end
+
+        function Base.isequal(a::$(name), b::$(name))
+            $(expand(isequal, length(names)))
         end
     end
 end
