@@ -6,18 +6,11 @@ export @auto_hash_equals
 
 
 function auto_hash(name, names)
-
-    function expand(i)
-        if i == 0
-            :(hash($(QuoteNode(name)), h))
-        else
-            :(hash(a.$(names[i]), $(expand(i-1))))
-        end
-    end
+    _tuple(x) = ntuple(i -> getfield(x, i), length(names))
 
     quote
         function Base.hash(a::$(name), h::UInt)
-            $(expand(length(names)))
+            hash($(_tuple)(a), hash($(name), h))
         end
     end
 end
