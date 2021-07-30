@@ -10,7 +10,7 @@ function auto_hash(name, names)
 
     quote
         function Base.hash(a::$(name), h::UInt)
-            hash($(_tuple)(a), hash($(name), h))
+            hash($(_tuple)(a), hash(typeof(a), h))
         end
     end
 end
