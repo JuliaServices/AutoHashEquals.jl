@@ -94,6 +94,9 @@ end
     @test I(1, 2) == I(1, 2)
 end
 
+@auto_hash_equals struct Val2{T} end
+@test hash(Val2{:one}()) != hash(Val2{:two}())
+
 macro cond(test, block)
     if eval(test)
         block
