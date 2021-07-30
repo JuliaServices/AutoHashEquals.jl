@@ -97,6 +97,23 @@ end
 @auto_hash_equals struct Val2{T} end
 @test hash(Val2{:one}()) != hash(Val2{:two}())
 
+module ModA
+    using AutoHashEquals
+    @auto_hash_equals struct Foo{T}
+        x::T
+    end
+end
+
+module ModB
+    using AutoHashEquals
+    @auto_hash_equals struct Foo{T}
+        x::T
+    end
+end
+
+@test ModA.Foo(1) != ModB.Foo(1)
+@test hash(ModA.Foo(1)) != hash(ModB.Foo(1))
+
 macro cond(test, block)
     if eval(test)
         block
