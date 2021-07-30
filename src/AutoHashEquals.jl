@@ -23,22 +23,15 @@ function auto_hash(name, names)
 end
 
 function auto_equals(name, names)
-
-    function expand(eq, i)
-        if i == 0
-            :true
-        else
-            :($(eq)(a.$(names[i]), b.$(names[i])) && $(expand(eq, i-1)))
-        end
-    end
+    _tuple(x) = ntuple(i -> getfield(x, i), length(names))
 
     quote
         function Base.:(==)(a::$(name), b::$(name))
-            $(expand(==, length(names)))
+            ==($(_tuple)(a), $(_tuple)(b))
         end
 
         function Base.isequal(a::$(name), b::$(name))
-            $(expand(isequal, length(names)))
+            isequal($(_tuple)(a), $(_tuple)(b))
         end
     end
 end
