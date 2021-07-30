@@ -86,6 +86,14 @@ end
 @test isequal(I(missing, nothing), I(missing, nothing))
 @test missing === (I(missing, nothing) == I(missing, nothing))
 
+@testset "use fields, not properties" begin
+    @test I(1, 2) == I(1, 2)
+    h = hash(I(1, 2))
+    Base.getproperty(x::I, f::Symbol) = rand()
+    @test h == hash(I(1, 2))
+    @test I(1, 2) == I(1, 2)
+end
+
 macro cond(test, block)
     if eval(test)
         block
