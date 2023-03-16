@@ -5,14 +5,9 @@ using AutoHashEquals
     const Nothing = Void
 end
 
-@static if VERSION >= v"0.7"
-    using Test
-    using Serialization
-    using Markdown: plain
-else
-    using Base.Test
-    using Base.Markdown: plain
-end
+using Test
+using Serialization
+using Markdown: plain
 
 function sausage(x)
     buf = IOBuffer()
@@ -26,7 +21,7 @@ end
     b
 end
 @test typeof(A(1,2)) == A
-@test hash(A(1,2)) == hash(2,hash(1,hash(:A)))
+@test hash(A(1,2)) == hash(2,hash(1,hash(:A, UInt(0))))
 @test A(1,2) == A(1,2)
 @test A(1,2) == sausage(A(1,2))
 @test A(1,2) != A(1,3)
@@ -49,12 +44,12 @@ abstract type E{N<:Union{Nothing,Int}} end
     e::N
 end
 G() = G{Nothing}(nothing)
-@test hash(F(1)) == hash(1, hash(:F))
+@test hash(F(1)) == hash(1, hash(:F, UInt(0)))
 @test hash(F(1)) != hash(F(2))
 @test F(1) == F(1)
 @test F(1) == sausage(F(1))
 @test F(1) != F(2)
-@test hash(G()) == hash(nothing, hash(:G))
+@test hash(G()) == hash(nothing, hash(:G, UInt(0)))
 @test G() == G()
 
 macro dummy(x)
