@@ -1,89 +1,46 @@
-VERSION < v"0.7.0-beta2.199" && __precompile__(true)
+# SPDX-License-Identifier: MIT
 
 module AutoHashEquals
 
 export @auto_hash_equals
 
+include("impl.jl")
 
-function auto_hash(name, names)
+"""
+    @auto_hash_equals [options] struct Foo ... end
 
-    function expand(i)
-        if i == 0
-            :(hash($(QuoteNode(name)), h))
-        else
-            :(hash(a.$(names[i]), $(expand(i-1))))
+Generate `Base.hash` and `Base.==` methods for `Foo`.
+
+Options:
+
+* `cache=true|false` whether or not to generate an extra cache field to store the precomputed hash value. Default: `false`.
+* `hashfn=myhash` the hash function to use. Default: `Base.hash`.
+* `fields=a,b,c` the fields to use for hashing and equality. Default: all fields.
+"""
+macro auto_hash_equals(args...)
+    kwargs = Dict{Symbol,Any}()
+    length(args) > 0 || error_usage(__source__)
+    for option in args[1:end-1]
+        if !isexpr(option, :(=), 2) || !(option.args[1] isa Symbol)
+            error("$(__source__.file):$(__source__.line): expected keyword argument of the form `key=value`, but saw `$option`")
         end
-    end
-
-    quote
-        function Base.hash(a::$(name), h::UInt)
-            $(expand(length(names)))
+        name=option.args[1]
+        value=option.args[2]
+        if name == :fields
+            # fields=a,b,c
+            if value isa Symbol
+                value = (value,)
+            elseif isexpr(value, :tuple)
+                value = Symbol[value.args...]
+                value=(value...,)
+            else
+                error("$(__source__.file):$(__source__.line): expected tuple or symbol for `fields`, but got `$value`")
+            end
         end
+        kwargs[name] = value
     end
+    typ = args[end]
+    auto_hash_equals_impl(__source__, typ; kwargs...)
 end
 
-function auto_equals(name, names)
-
-    function expand(i)
-        if i == 0
-            :true
-        else
-            :(isequal(a.$(names[i]), b.$(names[i])) && $(expand(i-1)))
-        end
-    end
-
-    quote
-        function Base.:(==)(a::$(name), b::$(name))
-            $(expand(length(names)))
-        end
-    end
-end
-
-struct UnpackException <: Exception
-    msg
-end
-
-unpack_name(node::Symbol) = node
-
-function unpack_name(node::Expr)
-    if node.head == :macrocall
-        unpack_name(node.args[2])
-    else
-        i = node.head == :type || node.head == :struct ? 2 : 1   # skip mutable flag
-        if length(node.args) >= i && isa(node.args[i], Symbol)
-            node.args[i]
-        elseif length(node.args) >= i && isa(node.args[i], Expr) && node.args[i].head in (:(<:), :(::))
-            unpack_name(node.args[i].args[1])
-        elseif length(node.args) >= i && isa(node.args[i], Expr) && node.args[i].head == :curly
-            unpack_name(node.args[i].args[1])
-        else
-            throw(UnpackException("cannot find name in $(node)"))
-        end
-    end
-end
-
-
-macro auto_hash_equals(typ)
-
-    @assert typ.head == :type || typ.head == :struct
-    name = unpack_name(typ)
-
-    names = Vector{Symbol}()
-    for field in typ.args[3].args
-        try
-            push!(names, unpack_name(field))
-        catch ParseException
-            # not a field
-        end
-    end
-    @assert length(names) > 0
-
-    quote
-        Base.@__doc__($(esc(typ)))
-        $(esc(auto_hash(name, names)))
-        $(esc(auto_equals(name, names)))
-    end
-end
-
-
-end
+end # module
