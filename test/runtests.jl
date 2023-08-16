@@ -129,9 +129,9 @@ end
         @testset "empty struct" begin
             @auto_hash_equals_cached struct T35 end
             @test T35() isa T35
-            @test hash(T35()) == hash(T35)
-            @test hash(T35(), UInt(0)) == hash(hash(T35), UInt(0))
-            @test hash(T35(), UInt(1)) == hash(hash(T35), UInt(1))
+            @test hash(T35()) == hash(:T35)
+            @test hash(T35(), UInt(0)) == hash(hash(:T35), UInt(0))
+            @test hash(T35(), UInt(1)) == hash(hash(:T35), UInt(1))
             @test T35() == T35()
             @test T35() == serialize_and_deserialize(T35())
             @test hash(T35()) == hash(serialize_and_deserialize(T35()))
@@ -143,7 +143,7 @@ end
                 x; y
             end
             @test T48(1, :x) isa T48
-            @test hash(T48(1, :x)) == hash(:x,hash(1,hash(T48)))
+            @test hash(T48(1, :x)) == hash(:x,hash(1,hash(:T48)))
             @test T48(1, :x) == T48(1, :x)
             @test T48(1, :x) != T48(2, :x)
             @test hash(T48(1, :x)) != hash(T48(2, :x))
@@ -207,7 +207,7 @@ end
                 y
             end
             @test T116(1, :x) isa T116
-            @test hash(T116(1, :x)) == hash(:x,hash(1,hash(T116)))
+            @test hash(T116(1, :x)) == hash(:x,hash(1,hash(:T116)))
             @test T116(1, :x) == T116(1, :x)
             @test T116(1, :x) != T116(2, :x)
             @test hash(T116(1, :x)) != hash(T116(2, :x))
@@ -223,7 +223,7 @@ end
                 y
             end
             @test T132(1, :x) isa T132
-            @test hash(T132(1, :x)) == hash(:x,hash(1,hash(T132)))
+            @test hash(T132(1, :x)) == hash(:x,hash(1,hash(:T132)))
             @test T132(1, :x) == T132(1, :x)
             @test T132(1, :x) != T132(2, :x)
             @test hash(T132(1, :x)) != hash(T132(2, :x))
@@ -239,7 +239,7 @@ end
                 @noop y
             end
             @test T135(1, :x) isa T135
-            @test hash(T135(1, :x)) == hash(:x,hash(1,hash(T135)))
+            @test hash(T135(1, :x)) == hash(:x,hash(1,hash(:T135)))
             @test T135(1, :x) == T135(1, :x)
             @test T135(1, :x) != T135(2, :x)
             @test hash(T135(1, :x)) != hash(T135(2, :x))
@@ -407,7 +407,7 @@ end
         end
 
         @testset "generic struct with members" begin
-            @auto_hash_equals struct T201{G}
+            @auto_hash_equals typearg=false struct T201{G}
                 x
                 y::G
             end
@@ -442,8 +442,8 @@ end
 
         @testset "generic bounds" begin
             abstract type Base225{T<:Union{String, Int}} end
-            @auto_hash_equals struct T225a{T}<:Base225{T} x::T end
-            @auto_hash_equals struct T225b{T}<:Base225{T} x::T end
+            @auto_hash_equals typearg=false struct T225a{T}<:Base225{T} x::T end
+            @auto_hash_equals typearg=false struct T225b{T}<:Base225{T} x::T end
             @test T225a(1) == T225a(1)
             @test T225a(1) == serialize_and_deserialize(T225a(1))
             @test T225a(1) != T225a(2)
@@ -587,6 +587,43 @@ end
             @test hash(S479(1, 2)) == hash(S479(1, 3))
         end
 
+        @testset "Test when type included in hash 1" begin
+            @auto_hash_equals typearg=true struct S590{T}
+                x::T
+            end
+            @test hash(S590{Int}(1)) == hash(1, hash(S590{Int}, UInt(0)))
+            @test hash(S590{Int}(1), UInt(0x2)) == hash(1, hash(S590{Int}, UInt(0x2)))
+        end
+
+        @testset "Test when type included in hash 2" begin
+            @auto_hash_equals typearg=true cache=true struct S597{T}
+                x::T
+            end
+            @test hash(S597{Int}(1)) == hash(1, hash(S597{Int}, UInt(0)))
+            @test hash(S597{Int}(1), UInt(0x2)) == hash(hash(1, hash(S597{Int}, UInt(0))), UInt(0x2))
+        end
+
+        @testset "Test when type NOT included in hash 1" begin
+            @auto_hash_equals typearg=false struct S607{T}
+                x::T
+            end
+            @test hash(S607{Int}(1)) == hash(1, hash(:S607, UInt(0)))
+            @test hash(S607{Int}(1), UInt(0x2)) == hash(1, hash(:S607, UInt(0x2)))
+        end
+
+        @testset "Test when type NOT included in hash 2" begin
+            @auto_hash_equals typearg=false cache=true struct S615{T}
+                x::T
+            end
+            @test hash(S615{Int}(1)) == hash(1, hash(:S615))
+            @test hash(S615{Int}(1), UInt(0x2)) == hash(hash(1, hash(:S615)), UInt(0x2))
+        end
+
+        @testset "typearg keyword parameter must be a bool" begin
+            @test_throws Exception @eval @auto_hash_equals typearg=1 struct S625{T}
+                x::T
+            end
+        end
     end
 end
 

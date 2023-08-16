@@ -23,21 +23,11 @@ function if_has_package(
     end
 end
 
-function error_usage(__source__)
-    usage=
-    """
-    Usage:
-        @auto_hash_equals [options] struct Foo ... end
-
-    Generate `Base.hash` and `Base.==` methods for `Foo`.
-
-    Options:
-
-    * `cache=true|false` whether or not to generate an extra cache field to store the precomputed hash value. Default: `false`.
-    * `hashfn=myhash` the hash function to use. Default: `Base.hash`.
-    * `fields=a,b,c` the fields to use for hashing and equality. Default: all fields.
-    """
-    error("$(__source__.file):$(__source__.line): $usage")
+function error_usage(__source__, problem=nothing)
+    if isnothing(problem)
+        problem = ""
+    end
+    error("$(__source__.file):$(__source__.line): $problem  Usage:\n\n$(@doc AutoHashEquals.@auto_hash_equals)")
 end
 
 # `_show_default_auto_hash_equals_cached` is just like `Base._show_default(io, x)`,
@@ -94,7 +84,7 @@ function unpack_type_name(__source__, n::Expr)
     if n.head === :curly
         type_name = n.args[1]
         type_name isa Symbol ||
-            error("$(__source__.file):$(__source__.line): macro @auto_hash_equals applied to type with invalid signature: `$type_name`")
+            error_usage(__source__, "macro @auto_hash_equals applied to type with invalid signature: `$type_name`.")
         where_list = n.args[2:length(n.args)]
         type_params = map(unpack_name, where_list)
         full_type_name = Expr(:curly, type_name, type_params...)
@@ -102,7 +92,7 @@ function unpack_type_name(__source__, n::Expr)
     elseif n.head === :(<:)
         return unpack_type_name(__source__, n.args[1])
     else
-        error("$(__source__.file):$(__source__.line): macro @auto_hash_equals applied to type with unexpected signature: `$n`")
+        error_usage(__source__, "macro @auto_hash_equals applied to type with invalid signature: `$n`.")
     end
 end
 
@@ -129,7 +119,7 @@ function get_fields(__source__, struct_decl::Expr; prevent_inner_constructors=fa
             # :function, :equals:call, :equals:where are defining functions - inner constructors
             # we don't want to permit that if it would interfere with us producing them.
             prevent_inner_constructors &&
-                error("$(__source__.file):$(__source__.line): macro @auto_hash_equals should not be used on a struct that declares an inner constructor")
+                error_usage(__source__, "macro @auto_hash_equals should not be used on a struct that declares an inner constructor.")
         end
     end
     function add_fields(__source__, b::Expr)
@@ -150,7 +140,7 @@ end
 
 function check_valid_alt_hash_name(__source__, alt_hash_name)
     isnothing(alt_hash_name) || alt_hash_name isa Symbol || is_expr(alt_hash_name, :.) ||
-        error("$(__source__.file):$(__source__.line): invalid alternate hash function name: `$alt_hash_name`")
+        error_usage(__source__, "invalid alternate hash function name: `$alt_hash_name`.")
 end
 
 isexpr(e, head) = e isa Expr && e.head == head
@@ -161,6 +151,7 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
     cache=false
     hashfn=nothing
     fields=nothing
+    typearg=true
 
     # Process the keyword arguments
     for kw in kwargs
@@ -168,37 +159,42 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
         @assert kw.first isa Symbol
         if kw.first === :cache
             if !(kw.second isa Bool)
-                error("$(__source__.file):$(__source__.line): `cache` argument must be a Bool, but got `$(kw.second)`")
+                error_usage(__source__, "`cache` argument must be a Bool, but got `$(kw.second)`.")
             end
             cache = kw.second
+        elseif kw.first === :typearg
+            if !(kw.second isa Bool)
+                error_usage(__source__, "`typearg` argument must be a Bool, but got `$(kw.second)`.")
+            end
+            typearg = kw.second
         elseif kw.first === :hashfn
             if !(kw.second isa Union{Symbol, Expr, Function})
-                error("$(__source__.file):$(__source__.line): `hashfn` argument must name a function, but got `$(kw.second)`")
+                error_usage(__source__, "`hashfn` argument must name a function, but got `$(kw.second)`.")
             end
             hashfn = kw.second
             check_valid_alt_hash_name(__source__, hashfn)
         elseif kw.first === :fields
             if !(kw.second isa Tuple) || !all(f isa Symbol for f in kw.second)
-                error("$(__source__.file):$(__source__.line): invalid `fields` argument: `$(kw.second)`.  Must be of the form `(x, y, z)`.")
+                error_usage(__source__, "invalid `fields` argument: `$(kw.second)`.")
             end
             fields = kw.second
         else
-            error("$(__source__.file):$(__source__.line): invalid keyword argument for @auto_hash_equals: `$(kw.first)`")
+            error_usage(__source__, "invalid keyword argument for @auto_hash_equals: `$(kw.first)`.")
         end
     end
 
     typ = get_struct_decl(__source__::LineNumberNode, typ)
 
-    auto_hash_equals_impl(__source__, typ, fields, cache, hashfn)
+    auto_hash_equals_impl(__source__, typ, fields, cache, hashfn, typearg)
 end
 
-function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, hashfn)
+function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, hashfn, typearg::Bool)
     is_expr(struct_decl, :struct) || error_usage(__source__)
 
     type_body = struct_decl.args[3].args
 
     (!cache || !struct_decl.args[1]) ||
-        error("$(__source__.file):$(__source__.line): macro @auto_hash_equals with cached=true should only be applied to a non-mutable struct.")
+        error_usage(__source__, "macro `@auto_hash_equals`` with `cached=true`` should only be applied to a non-mutable struct.")
 
     (type_name, full_type_name, where_list) = unpack_type_name(__source__, struct_decl.args[2])
     @assert type_name isa Symbol
@@ -209,9 +205,9 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
     else
         for f in fields
             f isa Symbol ||
-                error("$(__source__.file):$(__source__.line): invalid field name: `$f`")
+                error_usage(__source__, "invalid field name: `$f`.")
             f in member_names ||
-                error("$(__source__.file):$(__source__.line): field `$f` not found in struct `$type_name`")
+                error_usage(__source__, "field `$f` not found in struct `$type_name`.")
         end
     end
 
@@ -225,10 +221,11 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
         push!(type_body, :(_cached_hash::UInt))
 
         # Add the internal constructor
+        hash_init = (typearg && !isnothing(where_list)) ? :($hashfn($full_type_name)) : :($hashfn($(QuoteNode(type_name))))
         compute_hash = foldl(
             (r, a) -> :($hashfn($a, $r)),
             fields;
-            init = :($hashfn($full_type_name)))
+            init = hash_init)
         ctor_body = :(new($(member_names...), $compute_hash))
         if isnothing(where_list)
             push!(type_body, :(function $full_type_name($(member_names...))
@@ -241,37 +238,44 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
         end
     end
 
-    result = Expr(:block, __source__, esc(:(Base.@__doc__ $struct_decl)), __source__)
+    result = Expr(:block, __source__, esc(struct_decl), __source__)
 
     # add function for hash(x, h). hash(x)
     if cache
         push!(result.args, esc(:(function $hashfn(x::$type_name, h::UInt)
-                $hashfn(x._cached_hash, h)
-            end)))
+            $hashfn(x._cached_hash, h)
+        end)))
         push!(result.args, esc(:(function $hashfn(x::$type_name)
-                x._cached_hash
-            end)))
-        if hashfn != base_hash_name
-            # add function for Base.hash(x)
-            push!(result.args, esc(:(function $base_hash_name(x::$type_name)
-                    $hashfn(x)
-                end)))
-        end
+            x._cached_hash
+        end)))
     else
+        hash_typearg = typearg && !isnothing(where_list)
+        hash_init = hash_typearg ? :($hashfn($full_type_name, h)) : :($hashfn($(QuoteNode(type_name)), h))
         compute_hash = foldl(
             (r, a) -> :($hashfn($getfield(x, $(QuoteNode(a))), $r)),
             fields;
-            init = :($hashfn($(QuoteNode(type_name)), h)))
-        push!(result.args, esc(:(function $hashfn(x::$type_name, h::UInt)
-            $compute_hash
+            init = hash_init)
+        if hash_typearg
+            push!(result.args, esc(:(function $hashfn(x::$full_type_name, h::UInt) where {$(where_list...)}
+                $compute_hash
             end)))
+        else
+            push!(result.args, esc(:(function $hashfn(x::$type_name, h::UInt)
+                $compute_hash
+            end)))
+        end
     end
 
     if hashfn != base_hash_name
         # add function for Base.hash(x, h)
         push!(result.args, esc(:(function $base_hash_name(x::$type_name, h::UInt)
-                $hashfn(x, h)
+            $hashfn(x, h)
+        end)))
+        if cache
+            push!(result.args, esc(:(function $base_hash_name(x::$type_name)
+                $hashfn(x)
             end)))
+        end
     end
 
     # add function Base.show
@@ -291,47 +295,37 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
         end
     end
 
+    if cache && !isnothing(where_list)
+        # for generic types, we add an external constructor to perform ctor type inference:
+        push!(result.args, esc(quote
+            $type_name($(member_decls...)) where {$(where_list...)} = $full_type_name($(member_names...))
+        end))
+    end
+
+    # Add the == function
     equalty_impl = foldl(
         (r, f) -> :($r && $isequal($getfield(a, $(QuoteNode(f))), $getfield(b, $(QuoteNode(f))))),
         fields;
         init = cache ? :(a._cached_hash == b._cached_hash) : true)
-    if cache
-        if isnothing(where_list)
-            # add == for non-generic types
-            push!(result.args, esc(quote
-                function $Base.:(==)(a::$type_name, b::$type_name)
-                    $equalty_impl
-                end
-            end))
-        else
-            # We require the type be the same (including type arguments) for two instances to be equal
-            push!(result.args, esc(quote
-                function $Base.:(==)(a::$full_type_name, b::$full_type_name) where {$(where_list...)}
-                    $equalty_impl
-                end
-            end))
-            # for generic types, we add an external constructor to perform ctor type inference:
-            push!(result.args, esc(quote
-                $type_name($(member_decls...)) where {$(where_list...)} = $full_type_name($(member_names...))
-            end))
-        end
-    else
-        if struct_decl.args[1]
-            # mutable structs can efficiently be compared by reference
-            equalty_impl = :(a === b || $equalty_impl)
-        end
-        # for compatibility with earlier versions of
-        # [AutoHashEquals.jl](https://github.com/andrewcooke/AutoHashEquals.jl)
-        # we do not require that the types (specifically, the type arguments) are the
-        # same for two objects to be considered `==` when not cacheing the hash code.
+    if struct_decl.args[1]
+        # mutable structs can efficiently be compared by reference
+        equalty_impl = :(a === b || $equalty_impl)
+    end
+    if isnothing(where_list) || !typearg
         push!(result.args, esc(:(function $Base.:(==)(a::$type_name, b::$type_name)
             $equalty_impl
-            end)))
+        end)))
+    else
+        # If requested, require the type arguments be the same for two instances to be equal
+        push!(result.args, esc(:(function $Base.:(==)(a::$full_type_name, b::$full_type_name) where {$(where_list...)}
+            $equalty_impl
+        end)))
     end
 
     # Evaluating a struct declaration normally returns the struct itself.
-    # Lets preserve that.
-    push!(result.args, esc(type_name))
+    # we preserve that behavior when the macro is used.
+    # We also relay documentation to the struct type.
+    push!(result.args, esc(:(Base.@__doc__ $type_name)))
 
     return result
 end
