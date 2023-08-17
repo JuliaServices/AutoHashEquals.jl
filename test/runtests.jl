@@ -593,6 +593,8 @@ end
             end
             @test hash(S590{Int}(1)) == hash(1, hash(S590{Int}, UInt(0)))
             @test hash(S590{Int}(1), UInt(0x2)) == hash(1, hash(S590{Int}, UInt(0x2)))
+            @test S590{Int}(1) != S590{Any}(1)
+            @test hash(S590{Int}(1)) != hash(S590{Any}(1))
         end
 
         @testset "Test when type included in hash 2" begin

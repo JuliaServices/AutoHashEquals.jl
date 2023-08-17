@@ -27,7 +27,7 @@ Base.hash(x::Box, h::UInt) = hash(x.x, hash(:Box, h))
 Base.(:(==))(a::Box, b::Box) = isequal(a.x, b.x)
 ```
 
-We do not take the type arguments of a generic type into account for either `hash` or `==`.  So a `Box{Int}(1)` will test equal to a `Box{Any}(1)`.
+We do not take the type arguments of a generic type into account for either `hash` or `==` unless `typearg=true` is specified (see below).  So a `Box{Int}(1)` will test equal to a `Box{Any}(1)`.
 
 ## User-specified hash function
 
@@ -94,6 +94,7 @@ You can specify which fields should be significant for the purposes of computing
     a
     b
     c
+end
 ```
 
 this translates to
@@ -110,4 +111,38 @@ end
 function (Base).:(==)(a::Foo, b::Foo)
     Base.isequal(a.a, b.a) && Base.isequal(a.b, b.b)
 end
+```
+
+## Specifying whether or not type arguments should be significant
+
+You can specify that type arguments should be significant for the purposes of computing the hash function and checking equality by adding the keyword parameter `typearg=true`.  By default they are not significant.  You can specify the default (they are not significant) with `typearg=false`:
+
+```julia-repl
+julia> @auto_hash_equals struct Box1{T}
+           x::T
+       end
+Box1
+
+julia> Box1{Int}(1) == Box1{Any}(1)
+true
+
+julia> hash(Box1{Int}(1))
+0x05014b35fc91d289
+
+julia> hash(Box1{Any}(1))
+0x05014b35fc91d289
+
+julia> @auto_hash_equals typearg=true struct Box2{T}
+           x::T
+       end
+Box2
+
+julia> Box2{Int}(1) == Box2{Any}(1)
+false
+
+julia> hash(Box2{Int}(1))
+0xb7650cb555d6aafa
+
+julia> hash(Box2{Any}(1))
+0xefe691a94f296c61
 ```
