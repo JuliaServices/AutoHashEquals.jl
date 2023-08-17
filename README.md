@@ -59,7 +59,7 @@ struct Box{T}
     x::T
     _cached_hash::UInt
     function Box{T}(x) where T
-        new(x, Base.hash(x, Base.hash(Box{T})))
+        new(x, Base.hash(x, Base.hash(:Box)))
     end
 end
 function Base.hash(x::Box, h::UInt)
@@ -71,7 +71,7 @@ end
 function Base._show_default(io::IO, x::Box)
     AutoHashEqualsCached._show_default_auto_hash_equals_cached(io, x)
 end
-function Base.:(==)(a::Box{T}, b::Box{T}) where T
+function Base.:(==)(a::Box, b::Box)
     a._cached_hash == b._cached_hash && Base.isequal(a.x, b.x)
 end
 function Box(x::T) where T
@@ -79,11 +79,9 @@ function Box(x::T) where T
 end
 ```
 
-When you use the cache mechanism, the generated code checks the exact types of the two compared objects, so `Box{Int}(1)` will compare unequal to `Box{Any}(1)`.
-
 The definition of `_show_default(io,x)` prevents display of the `_cached_hash` field while preserving the behavior of `Base.show(...)` that handles self-recursive data structures without a stack overflow.
 
-We provide an external constructor for generic types so that you get the same type inference behavior you would get in the absence of this macro.  Specifically, you can write `Point(1, 2)` to get an object of type `Point{Int, Int}`.
+We provide an external constructor for generic types so that you get the same type inference behavior you would get in the absence of this macro.  Specifically, you can write `Box(1)` to get an object of type `Box{Int}`.
 
 ## Specifying significant fields
 
