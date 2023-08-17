@@ -624,6 +624,14 @@ end
                 x::T
             end
         end
+
+        @testset "check that type arguments are ignored by default" begin
+            @auto_hash_equals struct Box629{T}
+                x::T
+            end
+            @test Box629{Int}(1) == Box629{Any}(1)
+            @test hash(Box629{Int}(1)) == hash(Box629{Any}(1))
+        end
     end
 end
 
