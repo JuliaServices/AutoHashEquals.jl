@@ -16,7 +16,7 @@ Options:
 * `cache=true|false` whether or not to generate an extra cache field to store the precomputed hash value. Default: `false`.
 * `hashfn=myhash` the hash function to use. Default: `Base.hash`.
 * `fields=a,b,c` the fields to use for hashing and equality. Default: all fields.
-* `typearg=true|false` whether or not to make type arguments significant. Default: `true`.
+* `typearg=true|false` whether or not to make type arguments significant. Default: `false`.
 """
 macro auto_hash_equals(args...)
     kwargs = Dict{Symbol,Any}()

@@ -155,7 +155,7 @@ end
         end
 
         @testset "generic struct with members" begin
-            @auto_hash_equals_cached struct T63{G}
+            @auto_hash_equals cache=true typearg=true struct T63{G}
                 x
                 y::G
             end
@@ -189,8 +189,8 @@ end
 
         @testset "generic bounds" begin
             abstract type Base107{T<:Union{String, Int}} end
-            @auto_hash_equals_cached struct T107a{T}<:Base107{T} x::T end
-            @auto_hash_equals_cached struct T107b{T}<:Base107{T} x::T end
+            @auto_hash_equals cache=true typearg=true struct T107a{T}<:Base107{T} x::T end
+            @auto_hash_equals cache=true typearg=true struct T107b{T}<:Base107{T} x::T end
             @test T107a(1) isa T107a
             @test T107a(1) == T107a(1)
             @test T107a(1) == serialize_and_deserialize(T107a(1))

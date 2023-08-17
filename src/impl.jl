@@ -151,7 +151,7 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
     cache=false
     hashfn=nothing
     fields=nothing
-    typearg=true
+    typearg=false
 
     # Process the keyword arguments
     for kw in kwargs
