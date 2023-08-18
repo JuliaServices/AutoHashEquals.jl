@@ -144,3 +144,11 @@ julia> hash(Box2{Int}(1))
 julia> hash(Box2{Any}(1))
 0xefe691a94f296c61
 ```
+
+## Specifying the "type seed"
+
+When we compute the hash function, we start with a "seed" particular to the type being hashed.  You can select the seed to be used by specifying `typeseed=e`.
+
+The seed provided (`e`) is used in one of two ways, depending on the setting for `typearg`.
+If `typearg=false` (the default), then `e` will be used as the type seed.
+If `typearg=true`, then `e(t)` is used as the type seed, where `t` is the type of the object being hashed.

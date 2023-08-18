@@ -17,6 +17,7 @@ Options:
 * `hashfn=myhash` the hash function to use. Default: `Base.hash`.
 * `fields=a,b,c` the fields to use for hashing and equality. Default: all fields.
 * `typearg=true|false` whether or not to make type arguments significant. Default: `false`.
+* `typeseed=e` Use `e` (or `e(type)` if `typearg=true`) as the seed for hashing type arguments.
 """
 macro auto_hash_equals(args...)
     kwargs = Dict{Symbol,Any}()

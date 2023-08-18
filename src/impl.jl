@@ -152,6 +152,7 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
     hashfn=nothing
     fields=nothing
     typearg=false
+    typeseed=nothing
 
     # Process the keyword arguments
     for kw in kwargs
@@ -178,6 +179,8 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
                 error_usage(__source__, "invalid `fields` argument: `$(kw.second)`.")
             end
             fields = kw.second
+        elseif kw.first === :typeseed
+            typeseed = kw.second
         else
             error_usage(__source__, "invalid keyword argument for @auto_hash_equals: `$(kw.first)`.")
         end
@@ -185,10 +188,10 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
 
     typ = get_struct_decl(__source__::LineNumberNode, typ)
 
-    auto_hash_equals_impl(__source__, typ, fields, cache, hashfn, typearg)
+    auto_hash_equals_impl(__source__, typ, fields, cache, hashfn, typearg, typeseed)
 end
 
-function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, hashfn, typearg::Bool)
+function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, hashfn, typearg::Bool, typeseed)
     is_expr(struct_decl, :struct) || error_usage(__source__)
 
     type_body = struct_decl.args[3].args
@@ -221,7 +224,19 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
         push!(type_body, :(_cached_hash::UInt))
 
         # Add the internal constructor
-        hash_init = (typearg && !isnothing(where_list)) ? :($hashfn($full_type_name)) : :($hashfn($(QuoteNode(type_name))))
+        hash_init = if isnothing(typeseed)
+            if typearg
+                :($hashfn($full_type_name))
+            else
+                :($hashfn($(QuoteNode(type_name))))
+            end
+        else
+            if typearg
+                :(UInt($typeseed($full_type_name)))
+            else
+                :(UInt($typeseed))
+            end
+        end
         compute_hash = foldl(
             (r, a) -> :($hashfn($a, $r)),
             fields;
@@ -249,16 +264,34 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
             x._cached_hash
         end)))
     else
-        hash_typearg = typearg && !isnothing(where_list)
-        hash_init = hash_typearg ? :($hashfn($full_type_name, h)) : :($hashfn($(QuoteNode(type_name)), h))
+        hash_init =
+            if isnothing(typeseed)
+                if typearg
+                    :($hashfn($full_type_name, h))
+                else
+                    :($hashfn($(QuoteNode(type_name)), h))
+                end
+            else
+                if typearg
+                    :(h + UInt($typeseed($full_type_name)))
+                else
+                    :(h + UInt($typeseed))
+                end
+            end
         compute_hash = foldl(
             (r, a) -> :($hashfn($getfield(x, $(QuoteNode(a))), $r)),
             fields;
             init = hash_init)
-        if hash_typearg
-            push!(result.args, esc(:(function $hashfn(x::$full_type_name, h::UInt) where {$(where_list...)}
-                $compute_hash
-            end)))
+        if typearg
+            if isnothing(where_list)
+                push!(result.args, esc(:(function $hashfn(x::$full_type_name, h::UInt)
+                    $compute_hash
+                end)))
+            else
+                push!(result.args, esc(:(function $hashfn(x::$full_type_name, h::UInt) where {$(where_list...)}
+                    $compute_hash
+                end)))
+            end
         else
             push!(result.args, esc(:(function $hashfn(x::$type_name, h::UInt)
                 $compute_hash
