@@ -1,78 +1,146 @@
-[![Build Status](https://travis-ci.org/andrewcooke/AutoHashEquals.jl.png)](https://travis-ci.org/andrewcooke/AutoHashEquals.jl)
-[![Coverage Status](https://coveralls.io/repos/andrewcooke/AutoHashEquals.jl/badge.svg)](https://coveralls.io/r/andrewcooke/AutoHashEquals.jl)
+[![Build Status](https://github.com/JuliaServices/AutoHashEquals.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaServices/AutoHashEquals.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/JuliaServices/AutoHashEquals.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaServices/AutoHashEquals.jl)
 
-# AutoHashEquals
+# AutoHashEquals.jl - Automatically define hash and equals for Julia.
 
-A macro to add == and hash() to composite types (ie struct and mutable struct
-blocks).
+A macro to add `==` and `hash()` to struct types: `@auto_hash_equals`.
 
-For example:
+# `@auto_hash_equals`
+
+The macro `@auto_hash_equals` produces an implementation of `Base.hash(x)` that computes the hash code when invoked.
+
+You use it like so:
 
 ```julia
-@auto_hash_equals mutable struct Foo
-    a::Int
-    b
+@auto_hash_equals struct Box{T}
+    x::T
 end
 ```
 
-becomes
+which is translated to
 
 ```julia
-mutable struct Foo
-    a::Int
-    b
+struct Box{T}
+    x::T
 end
-Base.hash(a::Foo, h::UInt) = hash(a.b, hash(a.a, hash(:Foo, h)))
-Base.(:(==))(a::Foo, b::Foo) = isequal(a.b, b.b) && isequal(a.a, b.a) && true
+Base.hash(x::Box, h::UInt) = hash(x.x, hash(:Box, h))
+Base.(:(==))(a::Box, b::Box) = isequal(a.x, b.x)
 ```
 
-Where
+We do not take the type arguments of a generic type into account for either `hash` or `==` unless `typearg=true` is specified (see below).  So a `Box{Int}(1)` will test equal to a `Box{Any}(1)`.
 
-* we use `isequal()` because we want to match `Inf` values, etc.
+## User-specified hash function
 
-* we include the type in the hash so that different types with the same
-  contents don't collide
+You can specify the hash function to be implemented, by naming it before the struct definition with a keyword argument `hashfn`:
 
-* the type and `true` make it simple to generate code for empty records
+```julia
+@auto_hash_equals hashfn=SomePackage.myhash struct Foo
+    x
+    y
+end
+```
 
-* the `Base` module is explicitly used so that you don't need to
-  import it
+In this case the macro implements both `SomePackage.myhash` and `Base.hash` for `Foo`.`
 
-## Background
+## Caching the hash value
 
-Julia has two composite types: *value* types, defined with `struct`, and
-*record* types, defined with `mutable struct`.
+You can have the hash value precomputed and stored in a hidden field, by adding the keyword argument `cache=true`. This useful for non-mutable struct types that define recursive or deep data structures (and therefore are likely to be stored on the heap).  It computes the hash code during construction and caches it in a field of the struct.  If you are working with data structures of any significant depth, computing the hash once can speed things up at the expense of one additional field per struct.
 
-Value types are intended for compact, immutable objects.  They are stored on
-the stack, passed by value, and the default hash and equality are based on the
-literal bits in memory.
+```julia
+@auto_hash_equals cache=true struct Box{T}
+    x::T
+end
+```
 
-Record types are allocated on the heap, are passed by reference, and the
-default hash and equality are based on the pointer value (the data address).
+this translates to
 
-When you embed a record type in a value type, then the pointer to the record
-type becomes part of the value type, and so is included in equality and hash.
+```julia
+struct Box{T}
+    x::T
+    _cached_hash::UInt
+    function Box{T}(x) where T
+        new(x, Base.hash(x, Base.hash(:Box)))
+    end
+end
+function Base.hash(x::Box, h::UInt)
+    Base.hash(x._cached_hash, h)
+end
+function Base.hash(x::Box)
+    x._cached_hash
+end
+function Base._show_default(io::IO, x::Box)
+    AutoHashEqualsCached._show_default_auto_hash_equals_cached(io, x)
+end
+function Base.:(==)(a::Box, b::Box)
+    a._cached_hash == b._cached_hash && Base.isequal(a.x, b.x)
+end
+function Box(x::T) where T
+    Box{T}(x)
+end
+```
 
-Given the above, it is often necessary to define hash and equality for
-composite types.  Particularly when record types are used (directly, or in a
-value type), and when records with the same contents are semantically equal.
+The definition of `_show_default(io,x)` prevents display of the `_cached_hash` field while preserving the behavior of `Base.show(...)` that handles self-recursive data structures without a stack overflow.
 
-A common way to do this is to define the hash as a combination of the hashes
-of all the fields.  Similarly, equality is often defined as equality of all
-fields.
+We provide an external constructor for generic types so that you get the same type inference behavior you would get in the absence of this macro.  Specifically, you can write `Box(1)` to get an object of type `Box{Int}`.
 
-This macro automates this common approach.
+## Specifying significant fields
 
-## Warnings
+You can specify which fields should be significant for the purposes of computing the hash function and checking equality:
 
-If you use this macro for a mutable type, then the hash depends on the
-contents of that type, so changing the contents changes the hash.  Such types
-should not be stored in a hash table (Dict) and then mutated, because the
-objects will be "lost" (as the hash table *assumes* that hash is constant).
+```julia
+@auto_hash_equals fields=(a,b) struct Foo
+    a
+    b
+    c
+end
+```
 
-More generally, **this macro is only useful for mutable types when they are
-used as *immutable* records**.
+this translates to
 
-## Credits
+```julia
+struct Foo
+    a
+    b
+    c
+end
+function Base.hash(x::Foo, h::UInt)
+    Base.hash(x.b, Base.hash(x.a, Base.hash(:Foo, h)))
+end
+function (Base).:(==)(a::Foo, b::Foo)
+    Base.isequal(a.a, b.a) && Base.isequal(a.b, b.b)
+end
+```
 
-Thanks to Michael Hatherly, Yichao Yu, and Carlo Lucibello.
+## Specifying whether or not type arguments should be significant
+
+You can specify that type arguments should be significant for the purposes of computing the hash function and checking equality by adding the keyword parameter `typearg=true`.  By default they are not significant.  You can specify the default (they are not significant) with `typearg=false`:
+
+```julia-repl
+julia> @auto_hash_equals struct Box1{T}
+           x::T
+       end
+Box1
+
+julia> Box1{Int}(1) == Box1{Any}(1)
+true
+
+julia> hash(Box1{Int}(1))
+0x05014b35fc91d289
+
+julia> hash(Box1{Any}(1))
+0x05014b35fc91d289
+
+julia> @auto_hash_equals typearg=true struct Box2{T}
+           x::T
+       end
+Box2
+
+julia> Box2{Int}(1) == Box2{Any}(1)
+false
+
+julia> hash(Box2{Int}(1))
+0xb7650cb555d6aafa
+
+julia> hash(Box2{Any}(1))
+0xefe691a94f296c61
+```
