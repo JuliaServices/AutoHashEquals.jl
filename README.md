@@ -152,3 +152,5 @@ When we compute the hash function, we start with a "seed" particular to the type
 The seed provided (`e`) is used in one of two ways, depending on the setting for `typearg`.
 If `typearg=false` (the default), then `e` will be used as the type seed.
 If `typearg=true`, then `e(t)` is used as the type seed, where `t` is the type of the object being hashed.
+
+Note that the value of `typearg` is a value when `typearg=false` (or `typearg` is not specified), but a function when `typearg=true`.
