@@ -9,7 +9,7 @@ include("impl.jl")
 """
     @auto_hash_equals [options] struct Foo ... end
 
-Generate `Base.hash` and `Base.==` methods for `Foo`.
+Generate `Base.hash`, `Base.isequal`, and `Base.==` methods for `Foo`.
 
 Options:
 

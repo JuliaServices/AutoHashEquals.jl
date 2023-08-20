@@ -302,24 +302,69 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
         end))
     end
 
-    # Add the == function
-    equalty_impl = foldl(
-        (r, f) -> :($r && $isequal($getfield(a, $(QuoteNode(f))), $getfield(b, $(QuoteNode(f))))),
-        fields;
-        init = cache ? :(a._cached_hash == b._cached_hash) : true)
-    if struct_decl.args[1]
-        # mutable structs can efficiently be compared by reference
-        equalty_impl = :(a === b || $equalty_impl)
-    end
-    if isnothing(where_list) || !typearg
-        push!(result.args, esc(:(function $Base.:(==)(a::$type_name, b::$type_name)
-            $equalty_impl
-        end)))
-    else
-        # If requested, require the type arguments be the same for two instances to be equal
-        push!(result.args, esc(:(function $Base.:(==)(a::$full_type_name, b::$full_type_name) where {$(where_list...)}
-            $equalty_impl
-        end)))
+    # Add the `==` and `isequal` functions
+    for eq in (==, isequal)
+        if eq == isequal
+            equalty_impl = foldl(
+                (r, f) -> :($r && $eq($getfield(a, $(QuoteNode(f))), $getfield(b, $(QuoteNode(f))))),
+                fields;
+                init = cache ? :(a._cached_hash == b._cached_hash) : true)
+            if struct_decl.args[1]
+                # mutable structs can efficiently be compared by reference
+                # Note this optimization is only valid for `isequal`, e.g.
+                # a = [missing]
+                # a == a # missing
+                # isequal(a, a) # true
+                equalty_impl = :(a === b || $equalty_impl)
+            end
+        else
+            # Here we have a more complicated implementation in order to handle missings correctly.
+            # If any field comparison is false, we return false (even if some return missing).
+            # If no field comparisons are false, but one comparison missing, then we return missing.
+            # Otherwise we return true.
+            # (This matches the semantics of `==` for `Tuple`'s and `NamedTuple`'s.)
+
+            # Here we do some manual hygiene, since we will escape everything at the end
+            found_missing = gensym(:found_missing)
+            cmp = gensym(:cmp)
+            equalty_impl = quote
+                $found_missing = false
+            end
+            if cache
+                q = quote
+                    $cmp = a._cached_hash == b._cached_hash
+                    $cmp === false && return false
+                end
+                append!(equalty_impl.args, q.args)
+            end
+            for f in fields
+                q = quote
+                    $cmp = $eq($getfield(a, $(QuoteNode(f))), $getfield(b, $(QuoteNode(f))))
+                    $cmp === false && return false
+                    if $ismissing($cmp)
+                        $found_missing = true
+                    end
+                end
+                append!(equalty_impl.args, q.args)
+            end
+            q = quote
+                $found_missing && return missing
+                return true
+            end
+            append!(equalty_impl.args,q.args)
+        end
+
+        fn_name = Symbol(eq)
+        if isnothing(where_list) || !typearg
+            push!(result.args, esc(:(function (Base).$fn_name(a::$type_name, b::$type_name)
+                $equalty_impl
+            end)))
+        else
+            # If requested, require the type arguments be the same for two instances to be equal
+            push!(result.args, esc(:(function (Base).$fn_name(a::$full_type_name, b::$full_type_name) where {$(where_list...)}
+                $equalty_impl
+            end)))
+        end
     end
 
     # Evaluating a struct declaration normally returns the struct itself.
