@@ -139,7 +139,7 @@ end
 
 You can specify that type arguments should be significant for the purposes of computing the hash function and checking equality by adding the keyword parameter `typearg=true`.  By default they are not significant.  You can specify the default (they are not significant) with `typearg=false`:
 
-```julia-repl
+```julia
 julia> @auto_hash_equals struct Box1{T}
            x::T
        end
