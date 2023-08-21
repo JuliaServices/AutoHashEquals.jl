@@ -636,9 +636,9 @@ end
         end
     end
 
-    @testset "other options" begin
+    @testset "test option typeseed=e" begin
 
-        @testset "try user-specified type seed 1" begin
+        @testset "test typearg=true typeseed=hash generic type" begin
             @auto_hash_equals typearg=true typeseed=hash struct S640{T}
                 w::T
             end
@@ -646,7 +646,7 @@ end
             @test hash(S640{Int}(1), UInt(2)) == hash(1, UInt(2) + hash(S640{Int}))
         end
 
-        @testset "try user-specified type seed 2" begin
+        @testset "test typearg=false typeseed=K generic type" begin
             @auto_hash_equals typearg=false typeseed=0x3dfe92e747bd4140 struct S642{T}
                 w::T
             end
@@ -654,7 +654,7 @@ end
             @test hash(S642{Int}(1), UInt(2)) == hash(1, UInt(2) + 0x3dfe92e747bd4140)
         end
 
-        @testset "try user-specified type seed 3" begin
+        @testset "test typearg=true typeseed=hash non-generic type" begin
             @auto_hash_equals typearg=true typeseed=hash struct S650
                 w
             end
@@ -662,12 +662,26 @@ end
             @test hash(S650(1), UInt(2)) == hash(1, UInt(2) + hash(S650))
         end
 
-        @testset "try user-specified type seed 2" begin
+        @testset "test typearg=false typeseed=e non-generic type" begin
             @auto_hash_equals typearg=false typeseed=0x8dfd582f580f2e46 struct S658
                 w
             end
             @test hash(S658(1)) == hash(1, 0x8dfd582f580f2e46)
             @test hash(S658(1), UInt(2)) == hash(1, UInt(2) + 0x8dfd582f580f2e46)
+        end
+
+        @testset "test using a constant for typeseed when a function is expected" begin
+            @auto_hash_equals typearg=true typeseed=0x20cc10b97c7c95dd struct S674
+                w
+            end
+            @test_throws MethodError hash(S674(1))
+        end
+
+        @testset "test using a function for typeseed when a constant is expected" begin
+            @auto_hash_equals typearg=false typeseed=Base.hash struct S681
+                w
+            end
+            @test_throws MethodError hash(S681(1))
         end
 
     end
