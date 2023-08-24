@@ -147,17 +147,17 @@ julia> hash(Box2{Any}(1))
 
 ## Specifying the "type seed"
 
-When we compute the hash function, we start with a "seed" particular to the type being hashed.
-By default, the seed is computed as `hash(:TypeName)` if `typearg=false` (which is the default),
-where `hash` is the hash function specified with `hashfn=`, or `Base.hash` if `hashfn=` was not specified.
-If `typearg=true` was specified, then the seed is computed as `hash(Type)`,
-where `Type` is the type of the instance, including any type arguments.
+When we compute the hash function, we start with a "seed" specific to the type being hashed.
+By default, the seed is computed as `hash(:TypeName)` if `typearg=false` (which is the default).
+If `typearg=true` was specified, then the seed is computed as `type_seed(Type)`,
+where `Type` is the type of the instance, including any type arguments.  `type_seed` is a stable
+hash function defined in this package (but not exported).
 
 You can select the seed to be used by specifying `typeseed=e`.
 
 The seed provided (`e`) is used in one of two ways, depending on the setting for `typearg`.
-If `typearg=false` (the default), then `e` will be used as the type seed.
+If `typearg=false` (the default), then the value `e` will be used as the type seed.
 If `typearg=true`, then `e(t)` is used as the type seed, where `t` is the type of the object being hashed.
 
-Note that the value of `typeseed` is a value when `typearg=false` (or `typearg` is not specified),
+Note that the value of `typeseed` is expected to be a `UInt` value when `typearg=false` (or `typearg` is not specified),
 but a function that takes a type as its argument when `typearg=true`.

@@ -3,7 +3,8 @@
 
 Computes a value to use as a seed for computing the hash value of a type.
 
-The constants used in this computation are random.
+The constants used in this computation are random numbers
+produced by `Random.rand(Random.RandomDevice(), UInt)`.
 """
 function type_seed end
 
