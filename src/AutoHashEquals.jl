@@ -4,6 +4,7 @@ module AutoHashEquals
 
 export @auto_hash_equals
 
+include("type_key.jl")
 include("impl.jl")
 
 """

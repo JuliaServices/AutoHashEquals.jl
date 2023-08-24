@@ -226,9 +226,9 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
         # Add the internal constructor
         hash_init = if isnothing(typeseed)
             if typearg
-                :($hashfn($full_type_name))
+                :($type_key($full_type_name))
             else
-                :($hashfn($(QuoteNode(type_name))))
+                Base.hash(type_name)
             end
         else
             if typearg
@@ -267,9 +267,9 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
         hash_init =
             if isnothing(typeseed)
                 if typearg
-                    :($hashfn($full_type_name, h))
+                    :($type_key($full_type_name, h))
                 else
-                    :($hashfn($(QuoteNode(type_name)), h))
+                    :($(Base.hash)($(QuoteNode(type_name)), h))
                 end
             else
                 if typearg

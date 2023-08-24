@@ -139,10 +139,10 @@ julia> Box2{Int}(1) == Box2{Any}(1)
 false
 
 julia> hash(Box2{Int}(1))
-0xb7650cb555d6aafa
+0x467811eefea1d458
 
 julia> hash(Box2{Any}(1))
-0xefe691a94f296c61
+0x3042fd2f8fe839d7
 ```
 
 ## Specifying the "type seed"

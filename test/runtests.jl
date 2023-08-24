@@ -9,6 +9,9 @@ using Random
 using Serialization
 using Test
 
+# Import private member for test purposes
+using AutoHashEquals: type_key
+
 function serialize_and_deserialize(x)
     buf = IOBuffer()
     serialize(buf, x)
@@ -63,6 +66,15 @@ end
     b
     ignore_me
 end
+
+struct G{T, U}
+    x::T
+    y::U
+end
+
+abstract type Q end
+abstract type B{T} end
+@enum E e1 e2 e3
 
 @testset "AutoHashEquals.jl" begin
 
@@ -160,7 +172,7 @@ end
                 y::G
             end
             @test T63{Symbol}(1, :x) isa T63
-            @test hash(T63{Symbol}(1, :x)) == hash(:x,hash(1,hash(T63{Symbol})))
+            @test hash(T63{Symbol}(1, :x)) == hash(:x,hash(1,type_key(T63{Symbol})))
             @test hash(T63{Symbol}(1, :x)) != hash(T63{Any}(1, :x))
             @test T63{Symbol}(1, :x) != T63{Any}(1, :x) # note: type args are significant
             @test T63{Symbol}(1, :x) == T63{Symbol}(1, :x)
@@ -195,8 +207,8 @@ end
             @test T107a(1) == T107a(1)
             @test T107a(1) == serialize_and_deserialize(T107a(1))
             @test T107a(1) != T107a(2)
-            @test hash(T107a(1)) == hash(1, hash(T107a{Int}))
-            @test hash(T107a("x")) == hash("x", hash(T107a{String}))
+            @test hash(T107a(1)) == hash(1, type_key(T107a{Int}))
+            @test hash(T107a("x")) == hash("x", type_key(T107a{String}))
             @test hash(T107a(1)) != hash(T107b(1))
             @test hash(T107a(1)) != hash(T107a(2))
         end
@@ -591,8 +603,8 @@ end
             @auto_hash_equals typearg=true struct S590{T}
                 x::T
             end
-            @test hash(S590{Int}(1)) == hash(1, hash(S590{Int}, UInt(0)))
-            @test hash(S590{Int}(1), UInt(0x2)) == hash(1, hash(S590{Int}, UInt(0x2)))
+            @test hash(S590{Int}(1)) == hash(1, type_key(S590{Int}, UInt(0)))
+            @test hash(S590{Int}(1), UInt(0x2)) == hash(1, type_key(S590{Int}, UInt(0x2)))
             @test S590{Int}(1) != S590{Any}(1)
             @test hash(S590{Int}(1)) != hash(S590{Any}(1))
         end
@@ -601,8 +613,8 @@ end
             @auto_hash_equals typearg=true cache=true struct S597{T}
                 x::T
             end
-            @test hash(S597{Int}(1)) == hash(1, hash(S597{Int}, UInt(0)))
-            @test hash(S597{Int}(1), UInt(0x2)) == hash(hash(1, hash(S597{Int}, UInt(0))), UInt(0x2))
+            @test hash(S597{Int}(1)) == hash(1, type_key(S597{Int}, UInt(0)))
+            @test hash(S597{Int}(1), UInt(0x2)) == hash(hash(1, type_key(S597{Int}, UInt(0))), UInt(0x2))
         end
 
         @testset "Test when type NOT included in hash 1" begin
@@ -633,6 +645,45 @@ end
             end
             @test Box629{Int}(1) == Box629{Any}(1)
             @test hash(Box629{Int}(1)) == hash(Box629{Any}(1))
+        end
+
+        @testset "ensure that type_key(x) is stable" begin
+            @test 0x4965055ca9c88623 === type_key(Int)
+            @test 0x0df062180f6b5880 === type_key(String)
+
+            @test 0xf9a6ca5801d45b09 === type_key(G)
+            @test 0xf9a6ca5801d45b09 === type_key(G{T, U} where { T, U })
+            @test 0xf53284f9e807b4a3 === type_key(G{T, U} where { T <: Int, U <: String })
+            @test 0x5cb3bb63536c6cf1 === type_key(G{Int, String})
+            @test 0xa7672606502d460e === type_key(G{Int, T} where T)
+            @test 0x355f38500af67860 === type_key(G{T, String} where T)
+            @test 0x9f30a357e851217f === type_key(G{T, T} where T)
+            @test 0x9f30a357e851217f === type_key(G{T, T} where T)
+            @test 0x3d744a467126be1e === type_key(G{G{T, Int}, G{T, String}} where T)
+            @test 0x3d744a467126be1e === type_key(G{G{T, Int}, G{T, String}} where T)
+
+            @test 0x538beca01f293a83 === type_key(Q)
+            @test 0x77cb5d6464d056b2 === type_key(B)
+            @test 0x77cb5d6464d056b2 === type_key(B{T} where { T })
+            @test 0x16d5d946443d9674 === type_key(B{T} where { T <: Int })
+            @test 0x99cfdc2e3e9a8840 === type_key(B{Int64})
+
+            @test 0xba0f522abd7271e6 === type_key(Any)
+            @test 0x9514191d828c99aa === type_key(Union{Int, String})
+            @test 0x3cef2865f9232667 === type_key(Union{})
+            @test 0xb526450531768469 === type_key(Union)
+
+            @test 0x024013567c619983 === type_key(E)
+            @test 0x0bebb7628e67fe95 === type_key(Tuple)
+            @test 0xaed8787afb424a79 === type_key(Tuple{})
+            @test 0xaed8787afb424a79 === type_key(NTuple{0, Int})
+            @test 0xfb53d28e571bdb76 === type_key(Tuple{String})
+            @test 0xfb53d28e571bdb76 === type_key(NTuple{1, String})
+            @test 0x9a568ffe5fe206a4 === type_key(Tuple{String, Int})
+            @test 0xefd4727ccbbc5397 === type_key(typeof(@NamedTuple{a::Int, b::String}))
+            @test 0x7e20703885eb3e39 === type_key(NTuple)
+            @test 0x157c81572eba93c3 === type_key(NTuple{3, Int})
+            @test hash(1) === type_key(1)
         end
     end
 
