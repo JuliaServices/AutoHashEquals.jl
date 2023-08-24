@@ -2,6 +2,8 @@
     type_seed(x)
 
 Computes a value to use as a seed for computing the hash value of a type.
+
+The constants used in this computation are random.
 """
 function type_seed end
 
@@ -22,7 +24,7 @@ function type_seed(t::UnionAll, h::UInt)
     h = hash(h, 0xbd5f3e4941dba79d)
     h = type_seed(t.var, h)
     h = type_seed(t.body, h)
-    h
+    return h
 end
 
 function type_seed(x::Union, h::UInt)
@@ -60,7 +62,7 @@ function type_seed(t::DataType, h::UInt)
     return h
 end
 
-function type_seed(t::(typeof(Union{})), h::UInt)
+function type_seed(t::Core.TypeofBottom, h::UInt)
     return hash(h, 0x68f57dd85252e163)
 end
 
