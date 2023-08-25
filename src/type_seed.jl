@@ -75,6 +75,25 @@ type_seed(::Type{NTuple}, h::UInt) = 0x789db08b2c84bf6c
 type_seed(::Type{Tuple}, h::UInt) = 0x571b7e681184913a
 
 #
+# The hash of these types changed in Julia 1.7, so we are explicit to ensure stability
+#
+function type_seed(t::Tuple, h::UInt)
+    h = hash(h, 0x6ccd6cd06f6531b3)
+    for e in t
+        h = type_seed(e, h)
+    end
+    return h
+end
+function type_seed(t::NamedTuple, h::UInt)
+    h = hash(h, 0x2014f9d53d478b4f)
+    h = type_seed(fieldnames(typeof(t)), h)
+    for e in t
+        h = type_seed(e, h)
+    end
+    return h
+end
+
+#
 # For non-type values (e.g. `x` in `Val{x}`) we delegate to Base.hash.
 # Note, however, that Julia 1.7 changed the implementation of Base.hash(::Symbol, ::UInt),
 # yet retained stability of `Base.hash(::Symbol)`.   We take advantage of that to make

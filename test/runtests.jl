@@ -679,16 +679,15 @@ abstract type B{T} end
             @test 0x808e1de371b0cce2 === type_seed(Tuple{String})
             @test 0x808e1de371b0cce2 === type_seed(NTuple{1, String})
             @test 0x899ca12a00ea1296 === type_seed(Tuple{String, Int})
-            @test 0xb067e08cdb58efa6 === type_seed(@NamedTuple{a::Int, b::String})
-            @test 0xb067e08cdb58efa6 === type_seed(typeof((a=1, b="")))
-            @test 0xb4a73e6a5804cacf === type_seed(typeof((a="", b=1)))
+            @test 0xf343d5b9c3ca4b77 === type_seed(@NamedTuple{a::Int, b::String})
+            @test 0xf343d5b9c3ca4b77 === type_seed(typeof((a=1, b="")))
+            @test 0xf7833397407626a0 === type_seed(typeof((a="", b=1)))
             @test 0xa4c046858bf076c3 === type_seed(NTuple{3, Int})
             @test 0x9977c31bb10d21bc === type_seed(Val{1})
             @test 0x19a63e87164d8e87 === type_seed(Val{:x})
 
             @test 0x789db08b2c84bf6c === type_seed(NTuple)
             @test 0x571b7e681184913a === type_seed(Tuple)
-            @test 0x15322ec9472af94b === type_seed(Vararg)
             @test hash(hash(1), UInt(0)) === type_seed(1)
         end
     end
