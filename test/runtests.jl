@@ -689,6 +689,11 @@ abstract type B{T} end
             @test 0x789db08b2c84bf6c === type_seed(NTuple)
             @test 0x571b7e681184913a === type_seed(Tuple)
             @test hash(hash(1), UInt(0)) === type_seed(1)
+
+            @test 0x9977c31bb10d21bc === type_seed(Val{1})
+            @test 0xc19fa756b8cbf47d === type_seed(Val{:a})
+            @test 0x7df4acaad2128daa === type_seed(Val{(1, :a)})
+            @test 0xd5fb43db2f9427b4 === type_seed(Val{(1, :x)})
         end
     end
 
