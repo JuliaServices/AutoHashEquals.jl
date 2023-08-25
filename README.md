@@ -148,10 +148,10 @@ julia> hash(Box2{Any}(1))
 ## Specifying the "type seed"
 
 When we compute the hash function, we start with a "seed" specific to the type being hashed.
-By default, the seed is computed as `hash(:TypeName)` if `typearg=false` (which is the default).
+By default, the seed is computed as `Base.hash(:TypeName)` if `typearg=false` (which is the default).
 If `typearg=true` was specified, then the seed is computed as `type_seed(Type)`,
-where `Type` is the type of the instance, including any type arguments.  `type_seed` is a stable
-hash function defined in this package (but not exported).
+where `Type` is the type of the instance, including any type arguments.  `type_seed` is a
+stable hash function defined (but not exported) in this package.
 
 You can select the seed to be used by specifying `typeseed=e`.
 

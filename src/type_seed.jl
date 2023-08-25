@@ -16,7 +16,7 @@ function type_seed(m::Module, h::UInt)
         if mp === m
             return h
         else
-            return hash(nameof(m), type_seed(mp, h))
+            return type_seed(nameof(m), type_seed(mp, h))
         end
     end
 end
@@ -38,7 +38,7 @@ end
 
 function type_seed(t::TypeVar, h::UInt)
     h = hash(h, 0xc921c42a65aee273)
-    h = hash(t.name, h)
+    h = type_seed(t.name, h)
     h = type_seed(t.lb, h)
     h = type_seed(t.ub, h)
     return h
@@ -52,7 +52,7 @@ function type_seed(t::DataType, h::UInt)
         h0 = type_seed(tn.module, h0)
         h = hash(h, h0)
     end
-    h = hash(tn.name, h)
+    h = type_seed(tn.name, h)
     if !isempty(t.parameters)
         h0 = 0x9f86d3fbe4382c06
         for p in t.parameters
@@ -67,13 +67,20 @@ function type_seed(t::Core.TypeofBottom, h::UInt)
     return hash(h, 0x68f57dd85252e163)
 end
 
-function type_seed(t::Core.TypeofVararg, h::UInt)
-    h = hash(h, 0xe7f2ebfee436674d)
-    isdefined(t, :T) && (h = type_seed(t.T, h))
-    isdefined(t, :N) && (h = type_seed(t.N, h))
-    return h
-end
+#
+# The following two meta-types changed representation in 1.7, so we are
+# explicit about their hashes to ensure stability from 1.6 to 1.7.
+#
+type_seed(::Type{NTuple}, h::UInt) = 0x789db08b2c84bf6c
+type_seed(::Type{Tuple}, h::UInt) = 0x571b7e681184913a
 
-type_seed(x, h::UInt) = Base.hash(x, h)
+#
+# For non-type values (e.g. `x` in `Val{x}`) we delegate to Base.hash.
+# Note, however, that Julia 1.7 changed the implementation of Base.hash(::Symbol, ::UInt),
+# yet retained stability of `Base.hash(::Symbol)`.   We take advantage of that to make
+# the type seed computation stable even back to Julia 1.6 for types whose hashes are
+# unstable in that way.
+#
+type_seed(x, h::UInt) = Base.hash(Base.hash(x), h)
 
 type_seed(x) = type_seed(x, UInt(0))
