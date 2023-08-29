@@ -9,6 +9,9 @@ using Random
 using Serialization
 using Test
 
+# Import private member for test purposes
+using AutoHashEquals: type_seed
+
 function serialize_and_deserialize(x)
     buf = IOBuffer()
     serialize(buf, x)
@@ -63,6 +66,15 @@ end
     b
     ignore_me
 end
+
+struct G{T, U}
+    x::T
+    y::U
+end
+
+abstract type Q end
+abstract type B{T} end
+@enum E e1 e2 e3
 
 @testset "AutoHashEquals.jl" begin
 
@@ -160,7 +172,7 @@ end
                 y::G
             end
             @test T63{Symbol}(1, :x) isa T63
-            @test hash(T63{Symbol}(1, :x)) == hash(:x,hash(1,hash(T63{Symbol})))
+            @test hash(T63{Symbol}(1, :x)) == hash(:x,hash(1,type_seed(T63{Symbol})))
             @test hash(T63{Symbol}(1, :x)) != hash(T63{Any}(1, :x))
             @test T63{Symbol}(1, :x) != T63{Any}(1, :x) # note: type args are significant
             @test T63{Symbol}(1, :x) == T63{Symbol}(1, :x)
@@ -195,8 +207,8 @@ end
             @test T107a(1) == T107a(1)
             @test T107a(1) == serialize_and_deserialize(T107a(1))
             @test T107a(1) != T107a(2)
-            @test hash(T107a(1)) == hash(1, hash(T107a{Int}))
-            @test hash(T107a("x")) == hash("x", hash(T107a{String}))
+            @test hash(T107a(1)) == hash(1, type_seed(T107a{Int}))
+            @test hash(T107a("x")) == hash("x", type_seed(T107a{String}))
             @test hash(T107a(1)) != hash(T107b(1))
             @test hash(T107a(1)) != hash(T107a(2))
         end
@@ -591,8 +603,8 @@ end
             @auto_hash_equals typearg=true struct S590{T}
                 x::T
             end
-            @test hash(S590{Int}(1)) == hash(1, hash(S590{Int}, UInt(0)))
-            @test hash(S590{Int}(1), UInt(0x2)) == hash(1, hash(S590{Int}, UInt(0x2)))
+            @test hash(S590{Int}(1)) == hash(1, type_seed(S590{Int}, UInt(0)))
+            @test hash(S590{Int}(1), UInt(0x2)) == hash(1, type_seed(S590{Int}, UInt(0x2)))
             @test S590{Int}(1) != S590{Any}(1)
             @test hash(S590{Int}(1)) != hash(S590{Any}(1))
         end
@@ -601,8 +613,8 @@ end
             @auto_hash_equals typearg=true cache=true struct S597{T}
                 x::T
             end
-            @test hash(S597{Int}(1)) == hash(1, hash(S597{Int}, UInt(0)))
-            @test hash(S597{Int}(1), UInt(0x2)) == hash(hash(1, hash(S597{Int}, UInt(0))), UInt(0x2))
+            @test hash(S597{Int}(1)) == hash(1, type_seed(S597{Int}, UInt(0)))
+            @test hash(S597{Int}(1), UInt(0x2)) == hash(hash(1, type_seed(S597{Int}, UInt(0))), UInt(0x2))
         end
 
         @testset "Test when type NOT included in hash 1" begin
@@ -729,6 +741,105 @@ end
             end
 
         end
+
+        @testset "ensure that type_seed(x) is stable" begin
+            @test 0x4ae3767494b4cfaa === type_seed(Int)
+            @test 0xb6c8f68810a16d66 === type_seed(String)
+
+            @test 0x3215757a8995a661 === type_seed(G)
+            @test 0x3215757a8995a661 === type_seed(G{T, U} where { T, U })
+            @test 0xc6e6e47d689b8517 === type_seed(G{T, U} where { T <: Int, U <: String })
+            @test 0xaa10d1f6a9b7e132 === type_seed(G{Int, String})
+            @test 0xa740a4a4fc06d108 === type_seed(G{Int, T} where T)
+            @test 0x7ab308cb793c5618 === type_seed(G{T, String} where T)
+            @test 0xd02856316b177631 === type_seed(G{T, T} where T)
+            @test 0xd02856316b177631 === type_seed(G{T, T} where T)
+            @test 0xd3251f72348b86e2 === type_seed(G{G{T, Int}, G{T, String}} where T)
+            @test 0xd3251f72348b86e2 === type_seed(G{G{T, Int}, G{T, String}} where T)
+
+            @test 0x77f9d59da65a76bf === type_seed(Q)
+            @test 0xb1241c9348842d51 === type_seed(B)
+            @test 0xb1241c9348842d51 === type_seed(B{T} where { T })
+            @test 0x9ae23988eb7c0716 === type_seed(B{T} where { T <: Int })
+            @test 0xb3633f456e073d78 === type_seed(B{Int64})
+
+            @test 0x5da6365f88849a43 === type_seed(Any)
+            @test 0x3ea9a6632d35bdba === type_seed(Union{Int, String})
+            @test 0x3cef2865f9232667 === type_seed(Union{})
+            @test 0x7a86094a43978c16 === type_seed(Union)
+
+            @test 0x29c3b5ce0a9c3a5b === type_seed(E)
+            @test 0x00399c16f8744869 === type_seed(Tuple{})
+            @test 0x00399c16f8744869 === type_seed(NTuple{0, Int})
+            @test 0x808e1de371b0cce2 === type_seed(Tuple{String})
+            @test 0x808e1de371b0cce2 === type_seed(NTuple{1, String})
+            @test 0x899ca12a00ea1296 === type_seed(Tuple{String, Int})
+            @test 0xf343d5b9c3ca4b77 === type_seed(@NamedTuple{a::Int, b::String})
+            @test 0xf343d5b9c3ca4b77 === type_seed(typeof((a=1, b="")))
+            @test 0xf7833397407626a0 === type_seed(typeof((a="", b=1)))
+            @test 0xa4c046858bf076c3 === type_seed(NTuple{3, Int})
+            @test 0x9977c31bb10d21bc === type_seed(Val{1})
+            @test 0x19a63e87164d8e87 === type_seed(Val{:x})
+
+            @test 0x789db08b2c84bf6c === type_seed(NTuple)
+            @test 0x571b7e681184913a === type_seed(Tuple)
+            @test hash(hash(1), UInt(0)) === type_seed(1)
+
+            @test 0x9977c31bb10d21bc === type_seed(Val{1})
+            @test 0xc19fa756b8cbf47d === type_seed(Val{:a})
+            @test 0x7df4acaad2128daa === type_seed(Val{(1, :a)})
+            @test 0xd5fb43db2f9427b4 === type_seed(Val{(1, :x)})
+        end
+    end
+
+    @testset "test option typeseed=e" begin
+
+        @testset "test typearg=true typeseed=hash generic type" begin
+            @auto_hash_equals typearg=true typeseed=hash struct S640{T}
+                w::T
+            end
+            @test hash(S640{Int}(1)) == hash(1, hash(S640{Int}))
+            @test hash(S640{Int}(1), UInt(2)) == hash(1, UInt(2) + hash(S640{Int}))
+        end
+
+        @testset "test typearg=false typeseed=K generic type" begin
+            @auto_hash_equals typearg=false typeseed=0x3dfe92e747bd4140 struct S642{T}
+                w::T
+            end
+            @test hash(S642{Int}(1)) == hash(1, 0x3dfe92e747bd4140)
+            @test hash(S642{Int}(1), UInt(2)) == hash(1, UInt(2) + 0x3dfe92e747bd4140)
+        end
+
+        @testset "test typearg=true typeseed=hash non-generic type" begin
+            @auto_hash_equals typearg=true typeseed=hash struct S650
+                w
+            end
+            @test hash(S650(1)) == hash(1, hash(S650))
+            @test hash(S650(1), UInt(2)) == hash(1, UInt(2) + hash(S650))
+        end
+
+        @testset "test typearg=false typeseed=e non-generic type" begin
+            @auto_hash_equals typearg=false typeseed=0x8dfd582f580f2e46 struct S658
+                w
+            end
+            @test hash(S658(1)) == hash(1, 0x8dfd582f580f2e46)
+            @test hash(S658(1), UInt(2)) == hash(1, UInt(2) + 0x8dfd582f580f2e46)
+        end
+
+        @testset "test using a constant for typeseed when a function is expected" begin
+            @auto_hash_equals typearg=true typeseed=0x20cc10b97c7c95dd struct S674
+                w
+            end
+            @test_throws MethodError hash(S674(1))
+        end
+
+        @testset "test using a function for typeseed when a constant is expected" begin
+            @auto_hash_equals typearg=false typeseed=Base.hash struct S681
+                w
+            end
+            @test_throws MethodError hash(S681(1))
+        end
+
     end
 end
 
