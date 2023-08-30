@@ -163,8 +163,25 @@ julia> Box2{Int}(1) == Box2{Any}(1)
 false
 
 julia> hash(Box2{Int}(1))
-0xb7650cb555d6aafa
+0x467811eefea1d458
 
 julia> hash(Box2{Any}(1))
-0xefe691a94f296c61
+0x3042fd2f8fe839d7
 ```
+
+## Specifying the "type seed"
+
+When we compute the hash function, we start with a "seed" specific to the type being hashed.
+By default, the seed is computed as `Base.hash(:TypeName)` if `typearg=false` (which is the default).
+If `typearg=true` was specified, then the seed is computed as `type_seed(Type)`,
+where `Type` is the type of the instance, including any type arguments.  `type_seed` is a
+stable hash function defined (but not exported) in this package.
+
+You can select the seed to be used by specifying `typeseed=e`.
+
+The seed provided (`e`) is used in one of two ways, depending on the setting for `typearg`.
+If `typearg=false` (the default), then the value `e` will be used as the type seed.
+If `typearg=true`, then `e(t)` is used as the type seed, where `t` is the type of the object being hashed.
+
+Note that the value of `typeseed` is expected to be a `UInt` value when `typearg=false` (or `typearg` is not specified),
+but a function that takes a type as its argument when `typearg=true`.
