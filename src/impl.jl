@@ -305,7 +305,7 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
     # Add the `==` and `isequal` functions
     for eq in (==, isequal)
         if eq == isequal
-            equalty_impl = foldl(
+            equality_impl = foldl(
                 (r, f) -> :($r && $eq($getfield(a, $(QuoteNode(f))), $getfield(b, $(QuoteNode(f))))),
                 fields;
                 init = cache ? :(a._cached_hash == b._cached_hash) : true)
@@ -315,7 +315,7 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
                 # a = [missing]
                 # a == a # missing
                 # isequal(a, a) # true
-                equalty_impl = :(a === b || $equalty_impl)
+                equality_impl = :(a === b || $equality_impl)
             end
         else
             # Here we have a more complicated implementation in order to handle missings correctly.
@@ -323,35 +323,31 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
             # If no field comparisons are false, but one comparison missing, then we return missing.
             # Otherwise we return true.
             # (This matches the semantics of `==` for `Tuple`'s and `NamedTuple`'s.)
-            equalty_impl = :(found_missing = false)
+            equality_impl = Expr(:block, :(found_missing = false))
             if cache
                 q = :(
                     cmp = a._cached_hash == b._cached_hash;
                     cmp === false && return false;
                 )
-                append!(equalty_impl.args, q.args)
+                append!(equality_impl.args, q.args)
             end
             for f in fields
-                q = :(
-                    cmp = $isequal($getfield(a, $(QuoteNode(f))), $getfield(b, $(QuoteNode(f))));
-                    cmp === false && return false;
-                    $ismissing(cmp) && (found_missing = true);
-                )
-                append!(equalty_impl.args, q.args)
+                push!(equality_impl.args, :(cmp = $getfield(a, $(QuoteNode(f))) == $getfield(b, $(QuoteNode(f)))))
+                push!(equality_impl.args, :(cmp === false && return false))
+                push!(equality_impl.args, :($ismissing(cmp) && (found_missing = true)))
             end
-            q = :(return $ifelse(found_missing, missing, true))
-            append!(equalty_impl.args,q.args)
+            push!(equality_impl.args, :(return $ifelse(found_missing, missing, true)))
         end
 
         fn_name = Symbol(eq)
         if isnothing(where_list) || !typearg
             push!(result.args, esc(:(function ($Base).$fn_name(a::$type_name, b::$type_name)
-                $equalty_impl
+                $equality_impl
             end)))
         else
             # If requested, require the type arguments be the same for two instances to be equal
             push!(result.args, esc(:(function ($Base).$fn_name(a::$full_type_name, b::$full_type_name) where {$(where_list...)}
-                $equalty_impl
+                $equality_impl
             end)))
         end
     end
