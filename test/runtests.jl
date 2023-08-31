@@ -20,9 +20,7 @@ function serialize_and_deserialize(x)
 end
 
 macro noop(x)
-    esc(quote
-       Base.@__doc__$(x)
-    end)
+    esc(x)
 end
 
 macro _const(x)
@@ -885,6 +883,24 @@ abstract type B{T} end
             ret = b == b
             @test ret === missing
             @test isequal(b, b)
+        end
+
+        @testset "test the compat1 flag" begin
+            @auto_hash_equals struct Box890{T}
+                x::T
+            end
+            @test ismissing(Box890(missing) == Box890(missing))
+            @test isequal(Box890(missing), Box890(missing))
+            @test ismissing(Box890(missing) == Box890(1))
+            @test !isequal(Box890(missing), Box890(1))
+
+            @auto_hash_equals compat1=true struct Box891{T}
+                x::T
+            end
+            @test Box891(missing) == Box891(missing)
+            @test isequal(Box891(missing), Box891(missing))
+            @test Box891(missing) != Box891(1)
+            @test !isequal(Box891(missing), Box891(1))
         end
     end
 end

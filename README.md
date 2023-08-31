@@ -185,3 +185,32 @@ If `typearg=true`, then `e(t)` is used as the type seed, where `t` is the type o
 
 Note that the value of `typeseed` is expected to be a `UInt` value when `typearg=false` (or `typearg` is not specified),
 but a function that takes a type as its argument when `typearg=true`.
+
+## Compatibility mode
+
+In versions `v"1.0"` and earlier of `AutoHashEquals`, we produced a specialization of `Base.==`, implemented using `Base.isequal`.
+This was not correct.
+See https://docs.julialang.org/en/v1/base/base/#Base.isequal and https://docs.julialang.org/en/v1/base/math/#Base.:==.
+More correct would be to define `==` by using `==` on the members, and to define `isequal` by using `isequal` on the members.
+In version `v"2.0"` we provide a correct implementation, thanks to @ericphanson.
+
+To get the same behavior as `v"1.0"` of this package, in which `==` is implemented based on `isequal`,
+you can specify `compat1=true`.
+
+```julia
+@auto_hash_equals struct Box890{T}
+    x::T
+end
+@assert ismissing(Box890(missing) == Box890(missing))
+@assert isequal(Box890(missing), Box890(missing))
+@assert ismissing(Box890(missing) == Box890(1))
+@assert !isequal(Box890(missing), Box890(1))
+
+@auto_hash_equals compat1=true struct Box891{T}
+    x::T
+end
+@assert Box891(missing) == Box891(missing)
+@assert isequal(Box891(missing), Box891(missing))
+@assert Box891(missing) != Box891(1)
+@assert !isequal(Box891(missing), Box891(1))
+```
