@@ -153,6 +153,7 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
     fields=nothing
     typearg=false
     typeseed=nothing
+    compat1=false
 
     # Process the keyword arguments
     for kw in kwargs
@@ -181,6 +182,11 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
             fields = kw.second
         elseif kw.first === :typeseed
             typeseed = kw.second
+        elseif kw.first === :compat1
+            if !(kw.second isa Bool)
+                error_usage(__source__, "`compat1` argument must be a Bool, but got `$(kw.second)`.")
+            end
+            compat1 = kw.second
         else
             error_usage(__source__, "invalid keyword argument for @auto_hash_equals: `$(kw.first)`.")
         end
@@ -188,10 +194,10 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
 
     typ = get_struct_decl(__source__::LineNumberNode, typ)
 
-    auto_hash_equals_impl(__source__, typ, fields, cache, hashfn, typearg, typeseed)
+    auto_hash_equals_impl(__source__, typ, fields, cache, hashfn, typearg, typeseed, compat1)
 end
 
-function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, hashfn, typearg::Bool, typeseed)
+function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, hashfn, typearg::Bool, typeseed, compat1::Bool)
     is_expr(struct_decl, :struct) || error_usage(__source__)
 
     type_body = struct_decl.args[3].args
@@ -335,24 +341,56 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
         end))
     end
 
-    # Add the == function
-    equalty_impl = foldl(
-        (r, f) -> :($r && $isequal($getfield(a, $(QuoteNode(f))), $getfield(b, $(QuoteNode(f))))),
-        fields;
-        init = cache ? :(a._cached_hash == b._cached_hash) : true)
-    if struct_decl.args[1]
-        # mutable structs can efficiently be compared by reference
-        equalty_impl = :(a === b || $equalty_impl)
-    end
-    if isnothing(where_list) || !typearg
-        push!(result.args, esc(:(function $Base.:(==)(a::$type_name, b::$type_name)
-            $equalty_impl
-        end)))
-    else
-        # If requested, require the type arguments be the same for two instances to be equal
-        push!(result.args, esc(:(function $Base.:(==)(a::$full_type_name, b::$full_type_name) where {$(where_list...)}
-            $equalty_impl
-        end)))
+    # Add the `==` and `isequal` functions
+    for eq in (==, isequal)
+        # In compat mode, only define ==
+        eq == isequal && compat1 && continue
+
+        if eq == isequal || compat1
+            equality_impl = foldl(
+                (r, f) -> :($r && $isequal($getfield(a, $(QuoteNode(f))), $getfield(b, $(QuoteNode(f))))),
+                fields;
+                init = cache ? :(a._cached_hash == b._cached_hash) : true)
+            if struct_decl.args[1]
+                # mutable structs can efficiently be compared by reference
+                # Note this optimization is only valid for `isequal`, e.g.
+                # a = [missing]
+                # a == a # missing
+                # isequal(a, a) # true
+                equality_impl = :(a === b || $equality_impl)
+            end
+        else
+            # Julia library defines `isequal` in terms of `==`.
+            compat1 && continue
+
+            # Here we have a more complicated implementation in order to handle missings correctly.
+            # If any field comparison is false, we return false (even if some return missing).
+            # If no field comparisons are false, but one comparison missing, then we return missing.
+            # Otherwise we return true.
+            # (This matches the semantics of `==` for `Tuple`'s and `NamedTuple`'s.)
+            equality_impl = Expr(:block, :(found_missing = false))
+            if cache
+                push!(equality_impl.args, :(a._cached_hash != b._cached_hash && return false))
+            end
+            for f in fields
+                push!(equality_impl.args, :(cmp = $getfield(a, $(QuoteNode(f))) == $getfield(b, $(QuoteNode(f)))))
+                push!(equality_impl.args, :(cmp === false && return false))
+                push!(equality_impl.args, :($ismissing(cmp) && (found_missing = true)))
+            end
+            push!(equality_impl.args, :(return $ifelse(found_missing, missing, true)))
+        end
+
+        fn_name = Symbol(eq)
+        if isnothing(where_list) || !typearg
+            push!(result.args, esc(:(function ($Base).$fn_name(a::$type_name, b::$type_name)
+                $equality_impl
+            end)))
+        else
+            # If requested, require the type arguments be the same for two instances to be equal
+            push!(result.args, esc(:(function ($Base).$fn_name(a::$full_type_name, b::$full_type_name) where {$(where_list...)}
+                $equality_impl
+            end)))
+        end
     end
 
     # Evaluating a struct declaration normally returns the struct itself.

@@ -20,9 +20,7 @@ function serialize_and_deserialize(x)
 end
 
 macro noop(x)
-    esc(quote
-       Base.@__doc__$(x)
-    end)
+    esc(x)
 end
 
 macro _const(x)
@@ -261,23 +259,31 @@ abstract type B{T} end
             @test hash(T135(1, :x)) == hash(serialize_and_deserialize(T135(1, :x)))
         end
 
-        @testset "contained NaN values compare equal" begin
+        @testset "contained NaN values compare isequal (but not ==)" begin
             @auto_hash_equals_cached struct T140
                 x
             end
             nan = 0.0 / 0.0
             @test nan != nan
-            @test T140(nan) == T140(nan)
+            @test isequal(T140(nan), T140(nan))
+            @test T140(nan) != T140(nan)
+
         end
 
-        @testset "ensure circular data structures, produced by hook or by crook, do not blow the stack" begin
+        @testset "circular data structures behavior" begin
             @auto_hash_equals_cached struct T145
                 a::Array{Any,1}
             end
             t::T145 = T145(Any[1])
             t.a[1] = t
+            # hash does not stack overflow thanks to the cache
             @test hash(t) != 0
-            @test t == t
+            # `==` overflows
+            @test_throws StackOverflowError t == t
+            # isequal does not
+            @test isequal(t, t)
+            @test !isequal(t, T145(Any[]))
+            # Check printing
             @test "$t" == "$(T145)(Any[$(T145)(#= circular reference @-2 =#)])"
         end
 
@@ -513,13 +519,14 @@ abstract type B{T} end
             @test hash(T313(1, :x)) == hash(serialize_and_deserialize(T313(1, :x)))
         end
 
-        @testset "contained NaN values compare equal" begin
+        @testset "contained NaN values compare isequal (but not ==)" begin
             @auto_hash_equals struct T330
                 x
             end
             nan = 0.0 / 0.0
             @test nan != nan
-            @test T330(nan) == T330(nan)
+            @test isequal(T330(nan), T330(nan))
+            @test T330(nan) != T330(nan)
         end
 
         @testset "give no error if the struct contains internal constructors" begin
@@ -840,6 +847,61 @@ abstract type B{T} end
             @test_throws MethodError hash(S681(1))
         end
 
+
+        @testset "== propogates missing, but `isequal` does not" begin
+            # Fixed by https://github.com/JuliaServices/AutoHashEquals.jl/issues/18
+            @auto_hash_equals struct Box18{T}
+                x::T
+            end
+            ret = Box18(missing) == Box18(missing)
+            @test ret === missing
+            ret = Box18(missing) == Box18(1)
+            @test ret === missing
+            @test isequal(Box18(missing), Box18(missing))
+            @test !isequal(Box18(missing), Box18(1))
+
+            @auto_hash_equals struct Two18{T1, T2}
+                x::T1
+                y::T2
+            end
+            ret = Two18(1, missing) == Two18(1, 2)
+            @test ret === missing
+
+            ret = Two18(5, missing) == Two18(1, 2)
+            @test ret === false
+
+            ret = Two18(missing, 2) == Two18(1, 2)
+            @test ret === missing
+
+            ret = Two18(missing, 5) == Two18(1, 2)
+            @test ret === false
+
+            @auto_hash_equals mutable struct MutBox18{T}
+                x::T
+            end
+            b = MutBox18(missing)
+            ret = b == b
+            @test ret === missing
+            @test isequal(b, b)
+        end
+
+        @testset "test the compat1 flag" begin
+            @auto_hash_equals struct Box890{T}
+                x::T
+            end
+            @test ismissing(Box890(missing) == Box890(missing))
+            @test isequal(Box890(missing), Box890(missing))
+            @test ismissing(Box890(missing) == Box890(1))
+            @test !isequal(Box890(missing), Box890(1))
+
+            @auto_hash_equals compat1=true struct Box891{T}
+                x::T
+            end
+            @test Box891(missing) == Box891(missing)
+            @test isequal(Box891(missing), Box891(missing))
+            @test Box891(missing) != Box891(1)
+            @test !isequal(Box891(missing), Box891(1))
+        end
     end
 end
 

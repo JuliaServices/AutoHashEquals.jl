@@ -10,7 +10,7 @@ include("impl.jl")
 """
     @auto_hash_equals [options] struct Foo ... end
 
-Generate `Base.hash` and `Base.==` methods for `Foo`.
+Generate `Base.hash`, `Base.isequal`, and `Base.==` methods for `Foo`.
 
 Options:
 
@@ -19,6 +19,7 @@ Options:
 * `fields=a,b,c` the fields to use for hashing and equality. Default: all fields.
 * `typearg=true|false` whether or not to make type arguments significant. Default: `false`.
 * `typeseed=e` Use `e` (or `e(type)` if `typearg=true`) as the seed for hashing type arguments.
+* `compat1=true` To have `==` defined by using `isequal`.  Default: `false`.
 """
 macro auto_hash_equals(args...)
     kwargs = Dict{Symbol,Any}()
