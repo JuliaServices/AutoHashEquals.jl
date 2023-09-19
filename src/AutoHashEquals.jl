@@ -6,6 +6,7 @@ export @auto_hash_equals
 
 include("type_seed.jl")
 include("impl.jl")
+include("compat.jl")
 
 """
     @auto_hash_equals [options] struct Foo ... end

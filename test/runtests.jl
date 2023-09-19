@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: MIT
 
+include("compat.jl")
+
 module runtests
 
-using AutoHashEquals: @auto_hash_equals
+using AutoHashEquals: AutoHashEquals, @auto_hash_equals
 using Markdown: plain
 using Match: Match, @match, MatchFailure
 using Random
@@ -21,15 +23,6 @@ end
 
 macro noop(x)
     esc(x)
-end
-
-macro _const(x)
-    # const fields were introduced in Julia 1.8
-    if VERSION >= v"1.8"
-        esc(Expr(:const , x))
-    else
-        esc(x)
-    end
 end
 
 """
@@ -114,14 +107,12 @@ abstract type B{T} end
         end
 
         @testset "the macro sees through `const`" begin
-            if VERSION >= v"1.8"
-                T33 = eval(:(@auto_hash_equals mutable struct T33
-                    @_const x
-                end))
-                @test T33(1) == T33(1)
-                @test hash(T33(1)) == hash(T33(1))
-                @test hash(T33(1)) != hash(T33(2))
-            end
+            T33 = eval(:(@auto_hash_equals mutable struct T33
+                const x
+            end))
+            @test T33(1) == T33(1)
+            @test hash(T33(1)) == hash(T33(1))
+            @test hash(T33(1)) != hash(T33(2))
         end
 
         @testset "misuse of the macro" begin
@@ -288,12 +279,7 @@ abstract type B{T} end
         end
 
         # @test_throws requires a type before v1.8.
-        internal_constructor_error =
-            if VERSION >= v"1.7"
-                ErrorException
-            else
-                LoadError
-            end
+        internal_constructor_error = ErrorException
 
         @testset "give an error if the struct contains internal constructors 1" begin
             @test_throws internal_constructor_error begin
@@ -663,89 +649,49 @@ abstract type B{T} end
                 x
             end
 
-            if VERSION < v"1.7"
-                @test 0x67d66c8ebce604c4 === hash(Box1(1))
-                @test 0x57ce10fa6d65774c === hash(Box1(:x))
-                @test 0x7951851906420162 === hash(Box1("a"))
-                @test 0x6a46c6ef41c6b97d === hash(Box1(1), UInt(1))
-                @test 0x0ef668a2dd4500a0 === hash(Box1(:x), UInt(1))
-                @test 0x7398684da66deba5 === hash(Box1("a"), UInt(1))
-            else
-                @test 0x05014b35fc91d289 === hash(Box1(1))
-                @test 0x91d7652c7a24efb3 === hash(Box1(:x))
-                @test 0x1d9ac96f957cc50a === hash(Box1("a"))
-                @test 0x6e0378444e962be8 === hash(Box1(1), UInt(1))
-                @test 0xa31a1cd3c72d944c === hash(Box1(:x), UInt(1))
-                @test 0xe563b59c847e3d2f === hash(Box1("a"), UInt(1))
-            end
+            @test 0x05014b35fc91d289 === hash(Box1(1))
+            @test 0x91d7652c7a24efb3 === hash(Box1(:x))
+            @test 0x1d9ac96f957cc50a === hash(Box1("a"))
+            @test 0x6e0378444e962be8 === hash(Box1(1), UInt(1))
+            @test 0xa31a1cd3c72d944c === hash(Box1(:x), UInt(1))
+            @test 0xe563b59c847e3d2f === hash(Box1("a"), UInt(1))
 
             @auto_hash_equals struct Box2{T}
                 x::T
             end
 
-            if VERSION < v"1.7"
-                @test 0x97e8e85cce6400e5 === hash(Box2(1))
-                @test 0x97e8e85cce6400e5 === hash(Box2{Any}(1))
-                @test 0x95c1c5ce8a9d4310 === hash(Box2(:x))
-                @test 0x9424a3ad9ea0312c === hash(Box2("a"))
-                @test 0xd7caed9a4e280b13 === hash(Box2(1), UInt(1))
-                @test 0xd7caed9a4e280b13 === hash(Box2{Any}(1), UInt(1))
-                @test 0x3c6236446852acfb === hash(Box2(:x), UInt(1))
-                @test 0x08aaed0ddd68f482 === hash(Box2("a"), UInt(1))
-            else
-                @test 0xfddfe30b106aa2f0 === hash(Box2(1))
-                @test 0xfddfe30b106aa2f0 === hash(Box2{Any}(1))
-                @test 0xb9abdfa5883b32bb === hash(Box2(:x))
-                @test 0x6c49b14653a071c6 === hash(Box2("a"))
-                @test 0x451b0ebf9ee0f99c === hash(Box2(1), UInt(1))
-                @test 0x451b0ebf9ee0f99c === hash(Box2{Any}(1), UInt(1))
-                @test 0x175e9079609f34c5 === hash(Box2(:x), UInt(1))
-                @test 0x77cf64ab93060d1e === hash(Box2("a"), UInt(1))
-            end
+            @test 0xfddfe30b106aa2f0 === hash(Box2(1))
+            @test 0xfddfe30b106aa2f0 === hash(Box2{Any}(1))
+            @test 0xb9abdfa5883b32bb === hash(Box2(:x))
+            @test 0x6c49b14653a071c6 === hash(Box2("a"))
+            @test 0x451b0ebf9ee0f99c === hash(Box2(1), UInt(1))
+            @test 0x451b0ebf9ee0f99c === hash(Box2{Any}(1), UInt(1))
+            @test 0x175e9079609f34c5 === hash(Box2(:x), UInt(1))
+            @test 0x77cf64ab93060d1e === hash(Box2("a"), UInt(1))
 
             @auto_hash_equals struct Box3
                 x
             end
 
-            if VERSION < v"1.7"
-                @test 0xa28c5530534e00ff === hash(Box3(1))
-                @test 0xbd098dc8d84b2b3c === hash(Box3(:x))
-                @test 0x306232d62b351152 === hash(Box3("a"))
-                @test 0xd4f16da2b818329f === hash(Box3(1), UInt(1))
-                @test 0xbc02b85a84d59f22 === hash(Box3(:x), UInt(1))
-                @test 0xf3298984f3d3f10e === hash(Box3("a"), UInt(1))
-            else
-                @test 0x6c8a62ecebe7d0ce === hash(Box3(1))
-                @test 0xb3dc0f774c8dbf65 === hash(Box3(:x))
-                @test 0x18c77bdc2543b944 === hash(Box3("a"))
-                @test 0x1fe5e7cdd29edab1 === hash(Box3(1), UInt(1))
-                @test 0x55e8647bf53d5ecd === hash(Box3(:x), UInt(1))
-                @test 0xf556f204c1f1bc53 === hash(Box3("a"), UInt(1))
-            end
+            @test 0x6c8a62ecebe7d0ce === hash(Box3(1))
+            @test 0xb3dc0f774c8dbf65 === hash(Box3(:x))
+            @test 0x18c77bdc2543b944 === hash(Box3("a"))
+            @test 0x1fe5e7cdd29edab1 === hash(Box3(1), UInt(1))
+            @test 0x55e8647bf53d5ecd === hash(Box3(:x), UInt(1))
+            @test 0xf556f204c1f1bc53 === hash(Box3("a"), UInt(1))
 
             @auto_hash_equals struct Box4{T}
                 x::T
             end
 
-            if VERSION < v"1.7"
-                @test 0xa0164c66e926af40 === hash(Box4(1))
-                @test 0xa0164c66e926af40 === hash(Box4{Any}(1))
-                @test 0xcb0ce1b2da05840b === hash(Box4(:x))
-                @test 0xc10479084e27e5db === hash(Box4("a"))
-                @test 0xdbc4ab0260836c4a === hash(Box4(1), UInt(1))
-                @test 0xdbc4ab0260836c4a === hash(Box4{Any}(1), UInt(1))
-                @test 0x485f0ce7fd57b390 === hash(Box4(:x), UInt(1))
-                @test 0xaff3b9595e40223d === hash(Box4("a"), UInt(1))
-            else
-                @test 0x98dc0cd9a86cbdee === hash(Box4(1))
-                @test 0x98dc0cd9a86cbdee === hash(Box4{Any}(1))
-                @test 0x3dbd99c859966133 === hash(Box4(:x))
-                @test 0xa7d6e8579ef5a8cd === hash(Box4("a"))
-                @test 0x44ac08ef000cb686 === hash(Box4(1), UInt(1))
-                @test 0x44ac08ef000cb686 === hash(Box4{Any}(1), UInt(1))
-                @test 0xc7dc8347992b452d === hash(Box4(:x), UInt(1))
-                @test 0x3dcb6b6168a2c18d === hash(Box4("a"), UInt(1))
-            end
+            @test 0x98dc0cd9a86cbdee === hash(Box4(1))
+            @test 0x98dc0cd9a86cbdee === hash(Box4{Any}(1))
+            @test 0x3dbd99c859966133 === hash(Box4(:x))
+            @test 0xa7d6e8579ef5a8cd === hash(Box4("a"))
+            @test 0x44ac08ef000cb686 === hash(Box4(1), UInt(1))
+            @test 0x44ac08ef000cb686 === hash(Box4{Any}(1), UInt(1))
+            @test 0xc7dc8347992b452d === hash(Box4(:x), UInt(1))
+            @test 0x3dcb6b6168a2c18d === hash(Box4("a"), UInt(1))
 
         end
 
@@ -806,7 +752,7 @@ abstract type B{T} end
                 w::T
             end
             @test hash(S640{Int}(1)) == hash(1, hash(S640{Int}))
-            @test hash(S640{Int}(1), UInt(2)) == hash(1, UInt(2) + hash(S640{Int}))
+            @test hash(S640{Int}(1), UInt(2)) == hash(1, hash(S640{Int}, UInt(2)))
         end
 
         @testset "test typearg=false typeseed=K generic type" begin
@@ -822,7 +768,7 @@ abstract type B{T} end
                 w
             end
             @test hash(S650(1)) == hash(1, hash(S650))
-            @test hash(S650(1), UInt(2)) == hash(1, UInt(2) + hash(S650))
+            @test hash(S650(1), UInt(2)) == hash(1, hash(S650, UInt(2)))
         end
 
         @testset "test typearg=false typeseed=e non-generic type" begin
@@ -902,6 +848,7 @@ abstract type B{T} end
             @test Box891(missing) != Box891(1)
             @test !isequal(Box891(missing), Box891(1))
         end
+
     end
 end
 

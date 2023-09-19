@@ -234,7 +234,7 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
             if typearg
                 :($type_seed($full_type_name))
             else
-                Base.hash(type_name)
+                :($hashfn($(QuoteNode(type_name))))
             end
         else
             if typearg
@@ -275,11 +275,11 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
                 if typearg
                     :($type_seed($full_type_name, h))
                 else
-                    :($(Base.hash)($(QuoteNode(type_name)), h))
+                    :($hashfn($(QuoteNode(type_name)), h))
                 end
             else
                 if typearg
-                    :(h + UInt($typeseed($full_type_name)))
+                    :(UInt($typeseed($full_type_name, h)))
                 else
                     :(h + UInt($typeseed))
                 end
@@ -360,9 +360,6 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
                 equality_impl = :(a === b || $equality_impl)
             end
         else
-            # Julia library defines `isequal` in terms of `==`.
-            compat1 && continue
-
             # Here we have a more complicated implementation in order to handle missings correctly.
             # If any field comparison is false, we return false (even if some return missing).
             # If no field comparisons are false, but one comparison missing, then we return missing.
