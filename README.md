@@ -215,7 +215,7 @@ end
 @assert !isequal(Box891(missing), Box891(1))
 ```
 
-If you need compatibility mode allways and don't want to have to specify the mode on each invocation,
+If you need compatibility mode always and don't want to have to specify the mode on each invocation,
 you can instead import the compatibility version of the macro, which defaults to `compat1=true':
 
 ```julia
