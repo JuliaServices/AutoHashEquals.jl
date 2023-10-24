@@ -2,7 +2,7 @@
 
 The AutoHashEquals.jl package is licensed under the MIT "Expat" License:
 
-Copyright (c) 2015-2023: andrew cooke, RelationalAI, Inc, and contributors.
+Copyright (c) 2015-2023: Neal Gafter, Andrew Cooke, RelationalAI, Inc, and contributors.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
