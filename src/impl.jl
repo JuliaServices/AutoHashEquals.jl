@@ -1,12 +1,4 @@
-using Pkg
-
 const is_expr = Base.Meta.isexpr
-
-function pkgversion(m::Module)
-    pkgdir = dirname(string(first(methods(m.eval)).file))
-    toml = Pkg.TOML.parsefile(joinpath(pkgdir, "..", "Project.toml"))
-    VersionNumber(toml["version"])
-end
 
 function if_has_package(
     action::Function,
@@ -17,7 +9,7 @@ function if_has_package(
     pkgid = Base.PkgId(uuid, name)
     if Base.root_module_exists(pkgid)
         pkg = Base.root_module(pkgid)
-        if pkgversion(pkg) >= version
+        if Base.pkgversion(pkg) >= version
             return action(pkg)
         end
     end
