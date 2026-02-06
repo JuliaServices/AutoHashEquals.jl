@@ -186,6 +186,21 @@ If `typearg=true`, then `e(t)` is used as the type seed, where `t` is the type o
 Note that the value of `typeseed` is expected to be a `UInt` value when `typearg=false` (or `typearg` is not specified),
 but a function that takes a type as its argument when `typearg=true`.
 
+## Specifying that no equality or hash functions should be defined
+
+You can specify that no `hash`, `==` or `isequal` is defined with `none=true`.
+More precisely, this flag causes the functions to throw a `MethodError`
+
+```
+julia> @auto_hash_equals none=true struct Foo; x::Int; end
+
+julia> hash(Foo(1))
+ERROR: MethodError: no method matching hash(::Foo)
+
+julia> isequal(Foo(1), Foo(2))
+ERROR: MethodError: no method matching isequal(::Foo, ::Foo)
+```
+
 ## Compatibility mode
 
 In versions `v"1.0"` and earlier of `AutoHashEquals`, we produced a specialization of `Base.==`, implemented using `Base.isequal`.

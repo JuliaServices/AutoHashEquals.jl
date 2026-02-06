@@ -146,6 +146,7 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
     typearg=false
     typeseed=nothing
     compat1=false
+    none=false
 
     # Process the keyword arguments
     for kw in kwargs
@@ -174,6 +175,8 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
             fields = kw.second
         elseif kw.first === :typeseed
             typeseed = kw.second
+        elseif kw.first === :none
+            none = kw.second
         elseif kw.first === :compat1
             if !(kw.second isa Bool)
                 error_usage(__source__, "`compat1` argument must be a Bool, but got `$(kw.second)`.")
@@ -186,10 +189,10 @@ function auto_hash_equals_impl(__source__::LineNumberNode, typ; kwargs...)
 
     typ = get_struct_decl(__source__::LineNumberNode, typ)
 
-    auto_hash_equals_impl(__source__, typ, fields, cache, hashfn, typearg, typeseed, compat1)
+    auto_hash_equals_impl(__source__, typ, fields, cache, hashfn, typearg, typeseed, none, compat1)
 end
 
-function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, hashfn, typearg::Bool, typeseed, compat1::Bool)
+function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, hashfn, typearg::Bool, typeseed, none::Bool, compat1::Bool)
     is_expr(struct_decl, :struct) || error_usage(__source__)
 
     type_body = struct_decl.args[3].args
@@ -253,135 +256,145 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
 
     result = Expr(:block, __source__, esc(struct_decl), __source__)
 
-    # add function for hash(x, h). hash(x)
-    if cache
-        push!(result.args, esc(:(function $hashfn(x::$type_name, h::UInt)
-            $hashfn(x._cached_hash, h)
-        end)))
-        push!(result.args, esc(:(function $hashfn(x::$type_name)
-            x._cached_hash
-        end)))
-    else
-        hash_init =
-            if isnothing(typeseed)
-                if typearg
-                    :($type_seed($full_type_name, h))
-                else
-                    :($hashfn($(QuoteNode(type_name)), h))
-                end
-            else
-                if typearg
-                    :(UInt($typeseed($full_type_name, h)))
-                else
-                    :(h + UInt($typeseed))
-                end
-            end
-        compute_hash = foldl(
-            (r, a) -> :($hashfn($getfield(x, $(QuoteNode(a))), $r)),
-            fields;
-            init = hash_init)
-        if typearg
-            if isnothing(where_list)
-                push!(result.args, esc(:(function $hashfn(x::$full_type_name, h::UInt)
-                    $compute_hash
-                end)))
-            else
-                push!(result.args, esc(:(function $hashfn(x::$full_type_name, h::UInt) where {$(where_list...)}
-                    $compute_hash
-                end)))
-            end
-        else
-            push!(result.args, esc(:(function $hashfn(x::$type_name, h::UInt)
-                $compute_hash
-            end)))
-        end
-    end
-
-    if hashfn != base_hash_name
-        # add function for Base.hash(x, h)
-        push!(result.args, esc(:(function $base_hash_name(x::$type_name, h::UInt)
-            $hashfn(x, h)
-        end)))
+    if !none
+        # add function for hash(x, h). hash(x)
         if cache
-            push!(result.args, esc(:(function $base_hash_name(x::$type_name)
-                $hashfn(x)
-            end)))
-        end
-    end
-
-    # add function Base.show
-    if cache
-        push!(result.args, esc(:(function $Base._show_default(io::IO, x::$type_name)
-            $_show_default_auto_hash_equals_cached(io, x)
-        end)))
-    end
-
-    # Add function to interoperate with Rematch2 (eventually Match.jl) if loaded
-    # at the time the macro is expanded.
-    if_has_package("Match", Base.UUID("7eb4fadd-790c-5f42-8a69-bfa0b872bfbf"), v"2") do pkg
-        if :match_fieldnames in names(pkg; all=true)
-            push!(result.args, esc(:(function $pkg.match_fieldnames(::Type{$type_name})
-                $((fields...,))
-            end)))
-        end
-    end
-
-    if cache && !isnothing(where_list)
-        # for generic types, we add an external constructor to perform ctor type inference:
-        push!(result.args, esc(quote
-            $type_name($(member_decls...)) where {$(where_list...)} = $full_type_name($(member_names...))
-        end))
-    end
-
-    # Add the `==` and `isequal` functions
-    for eq in (==, isequal)
-        # In compat mode, only define ==
-        eq == isequal && compat1 && continue
-
-        if eq == isequal || compat1
-            equality_impl = foldl(
-                (r, f) -> :($r && $isequal($getfield(a, $(QuoteNode(f))), $getfield(b, $(QuoteNode(f))))),
+            push!(result.args, esc(:(function $hashfn(x::$type_name, h::UInt)
+                                         $hashfn(x._cached_hash, h)
+                                     end)))
+            push!(result.args, esc(:(function $hashfn(x::$type_name)
+                                         x._cached_hash
+                                     end)))
+        else
+            hash_init =
+                if isnothing(typeseed)
+                    if typearg
+                        :($type_seed($full_type_name, h))
+                    else
+                        :($hashfn($(QuoteNode(type_name)), h))
+                    end
+                else
+                    if typearg
+                        :(UInt($typeseed($full_type_name, h)))
+                    else
+                        :(h + UInt($typeseed))
+                    end
+                end
+            compute_hash = foldl(
+                (r, a) -> :($hashfn($getfield(x, $(QuoteNode(a))), $r)),
                 fields;
-                init = cache ? :(a._cached_hash == b._cached_hash) : true)
-            if struct_decl.args[1]
-                # mutable structs can efficiently be compared by reference
-                # Note this optimization is only valid for `isequal`, e.g.
-                # a = [missing]
-                # a == a # missing
-                # isequal(a, a) # true
-                equality_impl = :(a === b || $equality_impl)
+                init = hash_init)
+            if typearg
+                if isnothing(where_list)
+                    push!(result.args, esc(:(function $hashfn(x::$full_type_name, h::UInt)
+                                                 $compute_hash
+                                             end)))
+                else
+                    push!(result.args, esc(:(function $hashfn(x::$full_type_name, h::UInt) where {$(where_list...)}
+                                                 $compute_hash
+                                             end)))
+                end
+            else
+                push!(result.args, esc(:(function $hashfn(x::$type_name, h::UInt)
+                                             $compute_hash
+                                         end)))
             end
-        else
-            # Here we have a more complicated implementation in order to handle missings correctly.
-            # If any field comparison is false, we return false (even if some return missing).
-            # If no field comparisons are false, but one comparison missing, then we return missing.
-            # Otherwise we return true.
-            # (This matches the semantics of `==` for `Tuple`'s and `NamedTuple`'s.)
-            equality_impl = Expr(:block, :(found_missing = false))
-            if cache
-                push!(equality_impl.args, :(a._cached_hash != b._cached_hash && return false))
-            end
-            for f in fields
-                push!(equality_impl.args, :(cmp = $getfield(a, $(QuoteNode(f))) == $getfield(b, $(QuoteNode(f)))))
-                push!(equality_impl.args, :(cmp === false && return false))
-                push!(equality_impl.args, :($ismissing(cmp) && (found_missing = true)))
-            end
-            push!(equality_impl.args, :(return $ifelse(found_missing, missing, true)))
         end
 
-        fn_name = Symbol(eq)
-        if isnothing(where_list) || !typearg
-            push!(result.args, esc(:(function ($Base).$fn_name(a::$type_name, b::$type_name)
-                $equality_impl
-            end)))
-        else
-            # If requested, require the type arguments be the same for two instances to be equal
-            push!(result.args, esc(:(function ($Base).$fn_name(a::$full_type_name, b::$full_type_name) where {$(where_list...)}
-                $equality_impl
-            end)))
+        if hashfn != base_hash_name
+            # add function for Base.hash(x, h)
+            push!(result.args, esc(:(function $base_hash_name(x::$type_name, h::UInt)
+                                         $hashfn(x, h)
+                                     end)))
+            if cache
+                push!(result.args, esc(:(function $base_hash_name(x::$type_name)
+                                             $hashfn(x)
+                                         end)))
+            end
+        end
+
+        # add function Base.show
+        if cache
+            push!(result.args, esc(:(function $Base._show_default(io::IO, x::$type_name)
+                                         $_show_default_auto_hash_equals_cached(io, x)
+                                     end)))
+        end
+
+        # Add function to interoperate with Rematch2 (eventually Match.jl) if loaded
+        # at the time the macro is expanded.
+        if_has_package("Match", Base.UUID("7eb4fadd-790c-5f42-8a69-bfa0b872bfbf"), v"2") do pkg
+            if :match_fieldnames in names(pkg; all=true)
+                push!(result.args, esc(:(function $pkg.match_fieldnames(::Type{$type_name})
+                                             $((fields...,))
+                                         end)))
+            end
+        end
+
+        if cache && !isnothing(where_list)
+            # for generic types, we add an external constructor to perform ctor type inference:
+            push!(result.args, esc(quote
+                                       $type_name($(member_decls...)) where {$(where_list...)} = $full_type_name($(member_names...))
+                                   end))
+        end
+
+        # Add the `==` and `isequal` functions
+        for eq in (==, isequal)
+            # In compat mode, only define ==
+            eq == isequal && compat1 && continue
+
+            if eq == isequal || compat1
+                equality_impl = foldl(
+                    (r, f) -> :($r && $isequal($getfield(a, $(QuoteNode(f))), $getfield(b, $(QuoteNode(f))))),
+                    fields;
+                    init = cache ? :(a._cached_hash == b._cached_hash) : true)
+                if struct_decl.args[1]
+                    # mutable structs can efficiently be compared by reference
+                    # Note this optimization is only valid for `isequal`, e.g.
+                    # a = [missing]
+                    # a == a # missing
+                    # isequal(a, a) # true
+                    equality_impl = :(a === b || $equality_impl)
+                end
+            else
+                # Here we have a more complicated implementation in order to handle missings correctly.
+                # If any field comparison is false, we return false (even if some return missing).
+                # If no field comparisons are false, but one comparison missing, then we return missing.
+                # Otherwise we return true.
+                # (This matches the semantics of `==` for `Tuple`'s and `NamedTuple`'s.)
+                equality_impl = Expr(:block, :(found_missing = false))
+                if cache
+                    push!(equality_impl.args, :(a._cached_hash != b._cached_hash && return false))
+                end
+                for f in fields
+                    push!(equality_impl.args, :(cmp = $getfield(a, $(QuoteNode(f))) == $getfield(b, $(QuoteNode(f)))))
+                    push!(equality_impl.args, :(cmp === false && return false))
+                    push!(equality_impl.args, :($ismissing(cmp) && (found_missing = true)))
+                end
+                push!(equality_impl.args, :(return $ifelse(found_missing, missing, true)))
+            end
+
+            fn_name = Symbol(eq)
+            if isnothing(where_list) || !typearg
+                push!(result.args, esc(:(function ($Base).$fn_name(a::$type_name, b::$type_name)
+                                             $equality_impl
+                                         end)))
+            else
+                # If requested, require the type arguments be the same for two instances to be equal
+                push!(result.args, esc(:(function ($Base).$fn_name(a::$full_type_name, b::$full_type_name) where {$(where_list...)}
+                                             $equality_impl
+                                         end)))
+            end
+        end
+    else
+        # none
+        push!(result.args, esc(:($base_hash_name(x::$type_name, h::UInt) = throw(MethodError($base_hash_name, (x, h))))))
+        push!(result.args, esc(:($base_hash_name(x::$type_name) = throw(MethodError($base_hash_name, (x,))))))
+        eq_name = :($Base.eq)
+        for eq in (==, isequal)
+            eqname = :($Base.$(Symbol(eq)))
+            push!(result.args, esc(:($eqname(a::$type_name, b::$type_name) = throw(MethodError($eqname, (a, b))))))
         end
     end
-
     # Evaluating a struct declaration normally returns the struct itself.
     # we preserve that behavior when the macro is used.
     # We also relay documentation to the struct type.

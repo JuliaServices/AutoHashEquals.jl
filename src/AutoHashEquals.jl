@@ -21,6 +21,7 @@ Options:
 * `typearg=true|false` whether or not to make type arguments significant. Default: `false`.
 * `typeseed=e` Use `e` (or `e(type)` if `typearg=true`) as the seed for hashing type arguments.
 * `compat1=true` To have `==` defined by using `isequal`.  Default: `false`.
+* `none=true` To define `==`, `isequal` and `hash` to throw a `MethodError`.  Default: `false`.  (If true, the other keywords are ignored.)
 """
 macro auto_hash_equals(args...)
     kwargs = Dict{Symbol,Any}()

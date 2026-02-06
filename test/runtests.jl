@@ -850,6 +850,14 @@ abstract type B{T} end
         end
 
     end
+    @testset "test option none=true" begin
+        @auto_hash_equals none=true struct Non; x::Int; end
+        non = Non(1)
+        @test_throws MethodError non == non
+        @test_throws MethodError isequal(non, non)
+        @test_throws MethodError hash(non)
+        @test_throws MethodError hash(non, 1)
+    end
 end
 
 end # module
