@@ -70,6 +70,7 @@ abstract type B{T} end
 @enum E e1 e2 e3
 
 include("hash_contract.jl")
+include("cache_conversion.jl")
 
 @testset "AutoHashEquals.jl" begin
 
