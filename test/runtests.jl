@@ -5,7 +5,7 @@ include("compat.jl")
 module runtests
 
 using AutoHashEquals: AutoHashEquals, @auto_hash_equals
-using Markdown: plain
+using Markdown: Markdown, plain
 using Match: Match, @match, MatchFailure
 using Random
 using Serialization
@@ -20,6 +20,8 @@ function serialize_and_deserialize(x)
     seekstart(buf)
     deserialize(buf)
 end
+
+plain_doc(doc) = plain(doc isa Base.Docs.DocStr ? Markdown.parse(join(doc.text)) : doc)
 
 macro noop(x)
     esc(x)
@@ -67,6 +69,8 @@ abstract type Q end
 abstract type B{T} end
 @enum E e1 e2 e3
 
+include("hash_contract.jl")
+
 @testset "AutoHashEquals.jl" begin
 
     @testset "tests for @auto_hash_equals_cached" begin
@@ -76,7 +80,7 @@ abstract type B{T} end
             @auto_hash_equals_cached struct T23
                 x
             end
-            @test plain(@doc T23) == "a comment\n"
+            @test plain_doc(@doc T23) == "a comment\n"
         end
 
         @testset "macro preserves comments 2" begin
@@ -84,7 +88,7 @@ abstract type B{T} end
             @auto_hash_equals_cached @noop struct T26
                 x
             end
-            @test plain(@doc T26) == "a comment\n"
+            @test plain_doc(@doc T26) == "a comment\n"
         end
 
         @testset "macro preserves comments 3" begin
@@ -92,7 +96,7 @@ abstract type B{T} end
             @noop @auto_hash_equals_cached struct T30
                 @noop x
             end
-            @test plain(@doc T30) == "a comment\n"
+            @test plain_doc(@doc T30) == "a comment\n"
         end
 
         @testset "the macro sees through other macros and `begin`" begin
@@ -365,7 +369,7 @@ abstract type B{T} end
             @auto_hash_equals struct T160
                 x
             end
-            @test plain(@doc T160) == "a comment\n"
+            @test plain_doc(@doc T160) == "a comment\n"
         end
 
         @testset "macro preserves comments 2" begin
@@ -373,7 +377,7 @@ abstract type B{T} end
             @auto_hash_equals @noop struct T165
                 x
             end
-            @test plain(@doc T165) == "a comment\n"
+            @test plain_doc(@doc T165) == "a comment\n"
         end
 
         @testset "macro preserves comments 3" begin
@@ -381,13 +385,13 @@ abstract type B{T} end
             @noop @auto_hash_equals struct T170
                 @noop x
             end
-            @test plain(@doc T170) == "a comment\n"
+            @test plain_doc(@doc T170) == "a comment\n"
         end
 
         @testset "empty struct" begin
             @auto_hash_equals struct T176 end
             @test T176() isa T176
-            @test hash(T176()) == hash(:T176, UInt(0))
+            @test hash(T176(), UInt(0)) == hash(:T176, UInt(0))
             @test hash(T176(), UInt(1)) == hash(:T176, UInt(1))
             @test hash(T176(), UInt(1)) != hash(:T176, UInt(0))
             @test T176() == T176()
@@ -400,7 +404,7 @@ abstract type B{T} end
                 x; y
             end
             @test T186(1, :x) isa T186
-            @test hash(T186(1, :x)) == hash(:x,hash(1,hash(:T186, UInt(0))))
+            @test hash(T186(1, :x), UInt(0)) == hash(:x,hash(1,hash(:T186, UInt(0))))
             @test T186(1, :x) == T186(1, :x)
             @test T186(1, :x) != T186(2, :x)
             @test hash(T186(1, :x)) != hash(T186(2, :x))
@@ -416,7 +420,7 @@ abstract type B{T} end
                 y::G
             end
             @test T201{Symbol}(1, :x) isa T201
-            @test hash(T201{Symbol}(1, :x)) == hash(:x,hash(1,hash(:T201, UInt(0))))
+            @test hash(T201{Symbol}(1, :x), UInt(0)) == hash(:x,hash(1,hash(:T201, UInt(0))))
             @test hash(T201{Symbol}(1, :x)) == hash(T201{Any}(1, :x))
             @test T201{Symbol}(1, :x) == T201{Any}(1, :x) # note: type args are not significant
             @test T201{Symbol}(1, :x) == T201{Symbol}(1, :x)
@@ -441,7 +445,7 @@ abstract type B{T} end
             @test serialize_and_deserialize(T219a(1)) isa T219a
             @test T219a(1) == serialize_and_deserialize(T219a(1))
             @test hash(T219a(1)) == hash(serialize_and_deserialize(T219a(1)))
-            @test hash(T219a(1)) == hash(1, hash(:T219a, UInt(0)))
+            @test hash(T219a(1), UInt(0)) == hash(1, hash(:T219a, UInt(0)))
         end
 
         @testset "generic bounds" begin
@@ -451,8 +455,8 @@ abstract type B{T} end
             @test T225a(1) == T225a(1)
             @test T225a(1) == serialize_and_deserialize(T225a(1))
             @test T225a(1) != T225a(2)
-            @test hash(T225a(1)) == hash(1, hash(:T225a, UInt(0)))
-            @test hash(T225a("x")) == hash("x", hash(:T225a, UInt(0)))
+            @test hash(T225a(1), UInt(0)) == hash(1, hash(:T225a, UInt(0)))
+            @test hash(T225a("x"), UInt(0)) == hash("x", hash(:T225a, UInt(0)))
             @test hash(T225a(1)) != hash(T225b(1))
             @test hash(T225a(1)) != hash(T225a(2))
         end
@@ -463,7 +467,7 @@ abstract type B{T} end
                 y
             end
             @test T238(1, :x) isa T238
-            @test hash(T238(1, :x)) == hash(:x,hash(1,hash(:T238, UInt(0))))
+            @test hash(T238(1, :x), UInt(0)) == hash(:x,hash(1,hash(:T238, UInt(0))))
             @test T238(1, :x) == T238(1, :x)
             @test T238(1, :x) != T238(2, :x)
             @test hash(T238(1, :x)) != hash(T238(2, :x))
@@ -479,7 +483,7 @@ abstract type B{T} end
                 y
             end
             @test T254(1, :x) isa T254
-            @test hash(T254(1, :x)) == hash(:x,hash(1,hash(:T254, UInt(0))))
+            @test hash(T254(1, :x), UInt(0)) == hash(:x,hash(1,hash(:T254, UInt(0))))
             @test T254(1, :x) == T254(1, :x)
             @test T254(1, :x) != T254(2, :x)
             @test hash(T254(1, :x)) != hash(T254(2, :x))
@@ -495,7 +499,7 @@ abstract type B{T} end
                 @noop y
             end
             @test T313(1, :x) isa T313
-            @test hash(T313(1, :x)) == hash(:x,hash(1,hash(:T313, UInt(0))))
+            @test hash(T313(1, :x), UInt(0)) == hash(:x,hash(1,hash(:T313, UInt(0))))
             @test T313(1, :x) == T313(1, :x)
             @test T313(1, :x) != T313(2, :x)
             @test hash(T313(1, :x)) != hash(T313(2, :x))
@@ -526,7 +530,7 @@ abstract type B{T} end
                 x::UInt
             end
             q, r = rand(RandomDevice(), UInt, 2)
-            @test myhash(S470(q)) == hash(S470(q))
+            @test myhash(S470(q), UInt(0)) == hash(S470(q), UInt(0))
             @test myhash(S470(q), r) == hash(S470(q), r)
             r !== 0 && @test myhash(S470(q), r) != hash(S470(q))
         end
@@ -596,7 +600,7 @@ abstract type B{T} end
             @auto_hash_equals typearg=true struct S590{T}
                 x::T
             end
-            @test hash(S590{Int}(1)) == hash(1, type_seed(S590{Int}, UInt(0)))
+            @test hash(S590{Int}(1), UInt(0)) == hash(1, type_seed(S590{Int}, UInt(0)))
             @test hash(S590{Int}(1), UInt(0x2)) == hash(1, type_seed(S590{Int}, UInt(0x2)))
             @test S590{Int}(1) != S590{Any}(1)
             @test hash(S590{Int}(1)) != hash(S590{Any}(1))
@@ -614,7 +618,7 @@ abstract type B{T} end
             @auto_hash_equals typearg=false struct S607{T}
                 x::T
             end
-            @test hash(S607{Int}(1)) == hash(1, hash(:S607, UInt(0)))
+            @test hash(S607{Int}(1), UInt(0)) == hash(1, hash(:S607, UInt(0)))
             @test hash(S607{Int}(1), UInt(0x2)) == hash(1, hash(:S607, UInt(0x2)))
         end
 
@@ -640,10 +644,9 @@ abstract type B{T} end
             @test hash(Box629{Int}(1)) == hash(Box629{Any}(1))
         end
 
-        @testset "Check that by default the hash function is stable after 1.7" begin
-            # The value of `Base.hash(:x, UInt(0))` changed in 1.7, so it was already
-            # unstable between 1.6 and 1.7.  Here we just add tests so that future
-            # changes to the hash function will be observed.
+        if VERSION < v"1.13-"
+        @testset "legacy hash values on Julia 1.7–1.12" begin
+            # Julia 1.13 changes Base's hash algorithm and default seed.
 
             @auto_hash_equals struct Box1
                 x
@@ -695,7 +698,7 @@ abstract type B{T} end
 
         end
 
-        @testset "ensure that type_seed(x) is stable" begin
+        @testset "legacy type seed values on Julia 1.7–1.12" begin
             @test 0x4ae3767494b4cfaa === type_seed(Int)
             @test 0xb6c8f68810a16d66 === type_seed(String)
 
@@ -743,6 +746,7 @@ abstract type B{T} end
             @test 0x7df4acaad2128daa === type_seed(Val{(1, :a)})
             @test 0xd5fb43db2f9427b4 === type_seed(Val{(1, :x)})
         end
+        end
     end
 
     @testset "test option typeseed=e" begin
@@ -759,7 +763,7 @@ abstract type B{T} end
             @auto_hash_equals typearg=false typeseed=0x3dfe92e747bd4140 struct S642{T}
                 w::T
             end
-            @test hash(S642{Int}(1)) == hash(1, 0x3dfe92e747bd4140)
+            @test hash(S642{Int}(1), UInt(0)) == hash(1, 0x3dfe92e747bd4140)
             @test hash(S642{Int}(1), UInt(2)) == hash(1, UInt(2) + 0x3dfe92e747bd4140)
         end
 
@@ -775,7 +779,7 @@ abstract type B{T} end
             @auto_hash_equals typearg=false typeseed=0x8dfd582f580f2e46 struct S658
                 w
             end
-            @test hash(S658(1)) == hash(1, 0x8dfd582f580f2e46)
+            @test hash(S658(1), UInt(0)) == hash(1, 0x8dfd582f580f2e46)
             @test hash(S658(1), UInt(2)) == hash(1, UInt(2) + 0x8dfd582f580f2e46)
         end
 
