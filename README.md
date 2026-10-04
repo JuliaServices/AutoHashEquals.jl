@@ -47,19 +47,22 @@ In this case the macro implements both `SomePackage.myhash` and `Base.hash` for 
 
 You can have the hash value precomputed and stored in a hidden field, by adding the keyword argument `cache=true`. This is useful for non-mutable struct types that define recursive or deep data structures (and therefore are likely to be stored on the heap).  It computes the hash code during construction and caches it in a field of the struct.  If you are working with data structures of any significant depth, computing the hash once can speed things up at the expense of one additional field per struct.
 
+When a constructor converts an argument to its field's declared type, the cached hash uses the converted value.
+
 ```julia
 @auto_hash_equals cache=true struct Box{T}
     x::T
 end
 ```
 
-this translates to
+For ordinary field conversions, this behaves like
 
 ```julia
 struct Box{T}
     x::T
     _cached_hash::UInt
     function Box{T}(x) where T
+        x isa T || (x = convert(T, x)::T)
         new(x, Base.hash(x, Base.hash(:Box)))
     end
 end
