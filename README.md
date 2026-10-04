@@ -45,7 +45,7 @@ In this case the macro implements both `SomePackage.myhash` and `Base.hash` for 
 
 ## Caching the hash value
 
-You can have the hash value precomputed and stored in a hidden field, by adding the keyword argument `cache=true`. This useful for non-mutable struct types that define recursive or deep data structures (and therefore are likely to be stored on the heap).  It computes the hash code during construction and caches it in a field of the struct.  If you are working with data structures of any significant depth, computing the hash once can speed things up at the expense of one additional field per struct.
+You can have the hash value precomputed and stored in a hidden field, by adding the keyword argument `cache=true`. This is useful for non-mutable struct types that define recursive or deep data structures (and therefore are likely to be stored on the heap).  It computes the hash code during construction and caches it in a field of the struct.  If you are working with data structures of any significant depth, computing the hash once can speed things up at the expense of one additional field per struct.
 
 ```julia
 @auto_hash_equals cache=true struct Box{T}
