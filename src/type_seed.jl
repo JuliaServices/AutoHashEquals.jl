@@ -3,6 +3,8 @@
 
 Computes a value to use as a seed for computing the hash value of a type.
 
+Uses `Base.hash`; numeric results can change between Julia versions or processes.
+
 The constants used in this computation are random numbers
 produced by `Random.rand(Random.RandomDevice(), UInt)`.
 """
@@ -69,13 +71,13 @@ end
 
 #
 # The following two meta-types changed representation in 1.7, so we are
-# explicit about their hashes to ensure stability from 1.6 to 1.7.
+# explicit about their seeds.
 #
 type_seed(::Type{NTuple}, h::UInt) = 0x789db08b2c84bf6c
 type_seed(::Type{Tuple}, h::UInt) = 0x571b7e681184913a
 
 #
-# The hash of these types changed in Julia 1.7, so we are explicit to ensure stability
+# Walk tuple elements and named tuple field names explicitly.
 #
 function type_seed(t::Tuple, h::UInt)
     h = hash(h, 0x6ccd6cd06f6531b3)
@@ -95,10 +97,8 @@ end
 
 #
 # For non-type values (e.g. `x` in `Val{x}`) we delegate to Base.hash.
-# Note, however, that Julia 1.7 changed the implementation of Base.hash(::Symbol, ::UInt),
-# yet retained stability of `Base.hash(::Symbol)`.   We take advantage of that to make
-# the type seed computation stable even back to Julia 1.6 for types whose hashes are
-# unstable in that way.
+# The unseeded first hash avoids the Julia 1.7 change to the seeded Symbol hash.
+# Results still depend on Base's hash algorithm and default seed.
 #
 type_seed(x, h::UInt) = Base.hash(Base.hash(x), h)
 

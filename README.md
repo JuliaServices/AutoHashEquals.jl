@@ -174,8 +174,10 @@ julia> hash(Box2{Any}(1))
 When we compute the hash function, we start with a "seed" specific to the type being hashed.
 By default, the seed is computed as `Base.hash(:TypeName)` if `typearg=false` (which is the default).
 If `typearg=true` was specified, then the seed is computed as `type_seed(Type)`,
-where `Type` is the type of the instance, including any type arguments.  `type_seed` is a
-stable hash function defined (but not exported) in this package.
+where `Type` is the type of the instance, including any type arguments. `type_seed`
+is defined (but not exported) in this package and includes the type's module, name
+and parameters. It uses `Base.hash`, so numeric hash values can change between
+Julia versions or processes. Hash values should not be persisted as stable identifiers.
 
 You can select the seed to be used by specifying `typeseed=e`.
 
