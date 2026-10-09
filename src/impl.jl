@@ -235,17 +235,29 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
                 :(UInt($typeseed))
             end
         end
+        ctor_args = gensym.(member_names)
+        field_args = Dict(zip(member_names, ctor_args))
         compute_hash = foldl(
             (r, a) -> :($hashfn($a, $r)),
-            fields;
+            [field_args[name] for name in fields];
             init = hash_init)
-        ctor_body = :(new($(member_names...), $compute_hash))
+        conversions = [:($name isa $Base.fieldtype($full_type_name, $i) ||
+                         ($name = $Base.convert($Base.fieldtype($full_type_name, $i), $name)::$Base.fieldtype($full_type_name, $i)))
+                       for (i, name) in enumerate(ctor_args)]
+        hash_value = gensym(:hash_value)
+        ctor_body = quote
+            $(conversions...)
+            $hash_value = $compute_hash
+            $hash_value isa UInt || ($hash_value = $Base.convert(UInt, $hash_value)::UInt)
+            # Values are already converted; direct construction avoids repeating conversion.
+            $(Expr(:new, full_type_name, ctor_args..., hash_value))
+        end
         if isnothing(where_list)
-            push!(type_body, :(function $full_type_name($(member_names...))
+            push!(type_body, :(function $full_type_name($(ctor_args...))
                 $ctor_body
             end))
         else
-            push!(type_body, :(function $full_type_name($(member_names...)) where {$(where_list...)}
+            push!(type_body, :(function $full_type_name($(ctor_args...)) where {$(where_list...)}
                 $ctor_body
             end))
         end
