@@ -23,13 +23,17 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.9'
           - '1'
           - 'nightly'
         os:
           - ubuntu-latest
         arch:
           - x64
+        include:
+          # Julia 1.9 can't start on ubuntu-26.04: its libopenlibm needs an executable stack.
+          - version: '1.9'
+            os: ubuntu-24.04
+            arch: x64
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v3
