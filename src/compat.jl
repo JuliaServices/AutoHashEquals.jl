@@ -1,6 +1,6 @@
 module Compat
 
-using AutoHashEquals: AutoHashEquals
+using ..AutoHashEquals: AutoHashEquals
 
 export @auto_hash_equals
 
