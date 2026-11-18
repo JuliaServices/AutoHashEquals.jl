@@ -665,9 +665,10 @@ include("cache_conversion.jl")
             @test hash(Box629{Int}(1)) == hash(Box629{Any}(1))
         end
 
-        if VERSION < v"1.13-"
+        if VERSION < v"1.13-" && Sys.WORD_SIZE == 64
         @testset "legacy hash values on Julia 1.7–1.12" begin
             # Julia 1.13 changes Base's hash algorithm and default seed.
+            # 32-bit platforms produce different (32-bit) hash values.
 
             @auto_hash_equals struct Box1
                 x
