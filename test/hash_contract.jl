@@ -78,8 +78,8 @@ end
     @test type_seed(Tuple{}) == type_seed(NTuple{0,Int})
     @test type_seed(Tuple{String}) == type_seed(NTuple{1,String})
     @test type_seed(Union{Int,String}) == type_seed(Union{String,Int})
-    @test type_seed(NTuple) === 0x789db08b2c84bf6c
-    @test type_seed(Tuple) === 0x571b7e681184913a
+    @test type_seed(NTuple) === 0x789db08b2c84bf6c % UInt
+    @test type_seed(Tuple) === 0x571b7e681184913a % UInt
 end
 
 @testset "cache=true keeps == field-by-field" begin

@@ -665,9 +665,10 @@ include("cache_conversion.jl")
             @test hash(Box629{Int}(1)) == hash(Box629{Any}(1))
         end
 
-        if VERSION < v"1.13-"
+        if VERSION < v"1.13-" && Sys.WORD_SIZE == 64
         @testset "legacy hash values on Julia 1.7–1.12" begin
             # Julia 1.13 changes Base's hash algorithm and default seed.
+            # 32-bit platforms produce different (32-bit) hash values.
 
             @auto_hash_equals struct Box1
                 x
@@ -781,11 +782,11 @@ include("cache_conversion.jl")
         end
 
         @testset "test typearg=false typeseed=K generic type" begin
-            @auto_hash_equals typearg=false typeseed=0x3dfe92e747bd4140 struct S642{T}
+            @auto_hash_equals typearg=false typeseed=(0x3dfe92e747bd4140 % UInt) struct S642{T}
                 w::T
             end
-            @test hash(S642{Int}(1), UInt(0)) == hash(1, 0x3dfe92e747bd4140)
-            @test hash(S642{Int}(1), UInt(2)) == hash(1, UInt(2) + 0x3dfe92e747bd4140)
+            @test hash(S642{Int}(1), UInt(0)) == hash(1, (0x3dfe92e747bd4140 % UInt))
+            @test hash(S642{Int}(1), UInt(2)) == hash(1, UInt(2) + (0x3dfe92e747bd4140 % UInt))
         end
 
         @testset "test typearg=true typeseed=hash non-generic type" begin
@@ -797,11 +798,11 @@ include("cache_conversion.jl")
         end
 
         @testset "test typearg=false typeseed=e non-generic type" begin
-            @auto_hash_equals typearg=false typeseed=0x8dfd582f580f2e46 struct S658
+            @auto_hash_equals typearg=false typeseed=(0x8dfd582f580f2e46 % UInt) struct S658
                 w
             end
-            @test hash(S658(1), UInt(0)) == hash(1, 0x8dfd582f580f2e46)
-            @test hash(S658(1), UInt(2)) == hash(1, UInt(2) + 0x8dfd582f580f2e46)
+            @test hash(S658(1), UInt(0)) == hash(1, (0x8dfd582f580f2e46 % UInt))
+            @test hash(S658(1), UInt(2)) == hash(1, UInt(2) + (0x8dfd582f580f2e46 % UInt))
         end
 
         @testset "test using a constant for typeseed when a function is expected" begin
