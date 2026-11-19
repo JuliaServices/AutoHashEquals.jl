@@ -100,3 +100,14 @@ end
         @test_throws TypeError wrapper(BadConversionInput())
     end
 end
+
+@auto_hash_equals cache=true struct PhantomParameterBox{T}
+    value::Int
+end
+
+@testset "cache=true with a type parameter that no field uses" begin
+    @test PhantomParameterBox{Float64}(1) == PhantomParameterBox{Float64}(1)
+    @test hash(PhantomParameterBox{Float64}(1)) == hash(PhantomParameterBox{Float64}(1))
+    # As for a plain struct, `T` can't be inferred, so there is no `PhantomParameterBox(value)`.
+    @test_throws MethodError PhantomParameterBox(1)
+end
