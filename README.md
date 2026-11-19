@@ -49,6 +49,10 @@ You can have the hash value precomputed and stored in a hidden field, by adding 
 
 When a constructor converts an argument to its field's declared type, the cached hash uses the converted value.
 
+The hash is computed only at construction.
+If a field holds a mutable value, such as a `Vector`, and that value changes later, the cached hash is stale:
+`hash` and `isequal` then disagree with a newly constructed value that has the same contents.
+
 ```julia
 @auto_hash_equals cache=true struct Box{T}
     x::T
@@ -186,10 +190,13 @@ You can select the seed to be used by specifying `typeseed=e`.
 
 The seed provided (`e`) is used in one of two ways, depending on the setting for `typearg`.
 If `typearg=false` (the default), then the value `e` will be used as the type seed.
-If `typearg=true`, then `e(t)` is used as the type seed, where `t` is the type of the object being hashed.
+If `typearg=true`, then `e` is called with `t`, the type of the object being hashed.
+Without `cache=true` the call is `e(t, h)`, where `h` is the seed passed to `hash`.
+With `cache=true` the call is `e(t)`, and the result is cached.
+A function with both methods, such as `Base.hash`, works either way.
 
 Note that the value of `typeseed` is expected to be a `UInt` value when `typearg=false` (or `typearg` is not specified),
-but a function that takes a type as its argument when `typearg=true`.
+but a function of the type (and, without `cache=true`, the seed) when `typearg=true`.
 
 ## Compatibility mode
 
