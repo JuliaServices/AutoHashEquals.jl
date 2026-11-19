@@ -536,6 +536,19 @@ include("cache_conversion.jl")
             r !== 0 && @test myhash(S470(q), r) != hash(S470(q))
         end
 
+        @testset "hashfn=Base.hash behaves like the default" begin
+            @auto_hash_equals hashfn=Base.hash struct S537
+                x
+            end
+            @auto_hash_equals cache=true hashfn=Base.hash struct S538
+                x
+            end
+            @test hash(S537(1), UInt(5)) == hash(1, hash(:S537, UInt(5)))
+            @test hash(S538(1)) == hash(1, hash(:S538))
+            @test hash(S538(1), UInt(5)) == hash(hash(1, hash(:S538)), UInt(5))
+            @test isequal(S537(1), S537(1)) && isequal(S538(1), S538(1))
+        end
+
         @testset "fields are obeyed for the hash function and for pattern-matching 1" begin
             a = R477(1, 2, 3)
             b = R477(1, 2, 4)
