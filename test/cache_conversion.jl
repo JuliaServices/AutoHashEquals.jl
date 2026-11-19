@@ -111,3 +111,12 @@ end
     # As for a plain struct, `T` can't be inferred, so there is no `PhantomParameterBox(value)`.
     @test_throws MethodError PhantomParameterBox(1)
 end
+
+@auto_hash_equals cache=true struct BoundParameterBox{T,U<:AbstractVector{T}}
+    u::U
+end
+
+@testset "cache=true infers a type parameter used only in another parameter's bound" begin
+    @test BoundParameterBox([1]) isa BoundParameterBox{Int,Vector{Int}}
+    @test BoundParameterBox([1]) == BoundParameterBox([1])
+end

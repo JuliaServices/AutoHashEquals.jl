@@ -346,9 +346,10 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
     end
 
     # Like Julia's default outer constructor, add one only when every type parameter
-    # appears in a field type; otherwise the parameter can't be inferred.
+    # appears in a field type or in another parameter's bound (`U<:AbstractVector{T}`);
+    # otherwise the parameter can't be inferred.
     if cache && !isnothing(where_list) &&
-            all(p -> any(d -> d isa Expr && expr_contains(d.args[2], p), member_decls), full_type_name.args[2:end])
+            all(p -> any(d -> d isa Expr && expr_contains(d.args[2], p), [member_decls; where_list]), full_type_name.args[2:end])
         # for generic types, we add an external constructor to perform ctor type inference:
         push!(result.args, esc(quote
             $type_name($(member_decls...)) where {$(where_list...)} = $full_type_name($(member_names...))
