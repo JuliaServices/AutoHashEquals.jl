@@ -268,10 +268,10 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
     # add function for hash(x, h). hash(x)
     if cache
         push!(result.args, esc(:(function $hashfn(x::$type_name, h::UInt)
-            $hashfn(x._cached_hash, h)
+            $hashfn($getfield(x, :_cached_hash), h)
         end)))
         push!(result.args, esc(:(function $hashfn(x::$type_name)
-            x._cached_hash
+            $getfield(x, :_cached_hash)
         end)))
     else
         hash_init =
@@ -354,7 +354,7 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
             equality_impl = foldl(
                 (r, f) -> :($r && $isequal($getfield(a, $(QuoteNode(f))), $getfield(b, $(QuoteNode(f))))),
                 fields;
-                init = cache ? :(a._cached_hash == b._cached_hash) : true)
+                init = cache ? :($getfield(a, :_cached_hash) == $getfield(b, :_cached_hash)) : true)
             if struct_decl.args[1]
                 # mutable structs can efficiently be compared by reference
                 # Note this optimization is only valid for `isequal`, e.g.
@@ -371,7 +371,7 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
             # (This matches the semantics of `==` for `Tuple`'s and `NamedTuple`'s.)
             equality_impl = Expr(:block, :(found_missing = false))
             if cache
-                push!(equality_impl.args, :(a._cached_hash != b._cached_hash && return false))
+                push!(equality_impl.args, :($getfield(a, :_cached_hash) != $getfield(b, :_cached_hash) && return false))
             end
             for f in fields
                 push!(equality_impl.args, :(cmp = $getfield(a, $(QuoteNode(f))) == $getfield(b, $(QuoteNode(f)))))
