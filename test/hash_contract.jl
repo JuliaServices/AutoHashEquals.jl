@@ -18,6 +18,23 @@ module SeedSecond
     struct Box{T}; value::T; end
 end
 
+@auto_hash_equals cache=true struct CachedPropertyBox
+    value::Int
+end
+# A type that exposes only its declared properties.
+Base.getproperty(x::CachedPropertyBox, name::Symbol) =
+    name === :value ? getfield(x, :value) : throw(ArgumentError("no property $name"))
+
+@testset "cache=true works with a custom getproperty" begin
+    a, b = CachedPropertyBox(1), CachedPropertyBox(1)
+    @test isequal(a, b)
+    @test a == b
+    @test hash(a) == hash(b)
+    @test hash(a, UInt(1)) == hash(b, UInt(1))
+    @test a != CachedPropertyBox(2)
+    @test !isequal(a, CachedPropertyBox(2))
+end
+
 @testset "hash equality and collection lookup" begin
     for wrapper in (PlainBox, CachedBox, ParameterBox, CachedParameterBox)
         for value in (1, :x, "a", missing, NaN, -0.0, (1, :x), [1, 2])
