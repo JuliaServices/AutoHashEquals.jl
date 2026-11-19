@@ -81,3 +81,10 @@ end
     @test type_seed(NTuple) === 0x789db08b2c84bf6c
     @test type_seed(Tuple) === 0x571b7e681184913a
 end
+
+@testset "cache=true keeps == field-by-field" begin
+    for (x, y) in ((0.0, -0.0), ([0.0], [-0.0]), (missing, 1), (missing, missing), (NaN, NaN), (1, 1.0))
+        @test isequal(CachedBox(x) == CachedBox(y), x == y)
+        @test isequal(CachedBox(x), CachedBox(y)) == isequal(x, y)
+    end
+end
