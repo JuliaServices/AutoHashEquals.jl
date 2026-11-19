@@ -81,8 +81,9 @@ function Base._show_default(io::IO, x::Box)
 end
 # Note: the definition of `==` is more complicated when there are more fields,
 # in order to handle `missing` correctly. See below for a more complicated example.
+# `==` does not compare cached hashes, because `==` values can hash differently (`0.0 == -0.0`).
 function Base.:(==)(a::Box, b::Box)
-    a._cached_hash == b._cached_hash && Base.:(==)(a.x, b.x)
+    Base.:(==)(a.x, b.x)
 end
 function Base.isequal(a::Box, b::Box)
     a._cached_hash == b._cached_hash && Base.isequal(a.x, b.x)

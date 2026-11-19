@@ -374,10 +374,9 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
             # If no field comparisons are false, but one comparison missing, then we return missing.
             # Otherwise we return true.
             # (This matches the semantics of `==` for `Tuple`'s and `NamedTuple`'s.)
+            # No cached-hash shortcut: values can be `==` with different hashes (`0.0 == -0.0`),
+            # and a `missing` field must still make the result `missing`.
             equality_impl = Expr(:block, :(found_missing = false))
-            if cache
-                push!(equality_impl.args, :($getfield(a, :_cached_hash) != $getfield(b, :_cached_hash) && return false))
-            end
             for f in fields
                 push!(equality_impl.args, :(cmp = $getfield(a, $(QuoteNode(f))) == $getfield(b, $(QuoteNode(f)))))
                 push!(equality_impl.args, :(cmp === false && return false))
