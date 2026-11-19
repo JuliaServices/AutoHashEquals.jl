@@ -135,6 +135,8 @@ function check_valid_alt_hash_name(__source__, alt_hash_name)
         error_usage(__source__, "invalid alternate hash function name: `$alt_hash_name`.")
 end
 
+expr_contains(e, x) = e === x || (e isa Expr && any(a -> expr_contains(a, x), e.args))
+
 isexpr(e, head) = e isa Expr && e.head == head
 isexpr(e, head, n) = isexpr(e, head) && length(e.args) == n
 
@@ -343,7 +345,10 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
         end
     end
 
-    if cache && !isnothing(where_list)
+    # Like Julia's default outer constructor, add one only when every type parameter
+    # appears in a field type; otherwise the parameter can't be inferred.
+    if cache && !isnothing(where_list) &&
+            all(p -> any(d -> d isa Expr && expr_contains(d.args[2], p), member_decls), full_type_name.args[2:end])
         # for generic types, we add an external constructor to perform ctor type inference:
         push!(result.args, esc(quote
             $type_name($(member_decls...)) where {$(where_list...)} = $full_type_name($(member_names...))
