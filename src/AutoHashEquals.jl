@@ -8,7 +8,7 @@ include("type_seed.jl")
 include("impl.jl")
 include("compat.jl")
 
-"""
+const USAGE = """
     @auto_hash_equals [options] struct Foo ... end
 
 Generate `Base.hash`, `Base.isequal`, and `Base.==` methods for `Foo`.
@@ -22,6 +22,8 @@ Options:
 * `typeseed=e` Use `e` as the seed for hashing type arguments. With `typearg=true`, use `e(type, h)`, or `e(type)` with `cache=true`.
 * `compat1=true` To have `==` defined by using `isequal`.  Default: `false`.
 """
+
+@doc USAGE
 macro auto_hash_equals(args...)
     kwargs = Dict{Symbol,Any}()
     length(args) > 0 || error_usage(__source__)
