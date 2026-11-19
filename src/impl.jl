@@ -311,14 +311,19 @@ function auto_hash_equals_impl(__source__, struct_decl, fields, cache::Bool, has
 
     if hashfn != base_hash_name
         # add function for Base.hash(x, h)
-        push!(result.args, esc(:(function $base_hash_name(x::$type_name, h::UInt)
+        delegates = Expr(:block, :(function $base_hash_name(x::$type_name, h::UInt)
             $hashfn(x, h)
-        end)))
+        end))
         if cache
-            push!(result.args, esc(:(function $base_hash_name(x::$type_name)
+            push!(delegates.args, :(function $base_hash_name(x::$type_name)
                 $hashfn(x)
-            end)))
+            end))
         end
+        # `hashfn` can still name `Base.hash` (e.g. `hashfn=Base.hash`); then these methods
+        # would replace the ones above with ones that call themselves.
+        push!(result.args, esc(:(if $hashfn !== $base_hash_name
+            $delegates
+        end)))
     end
 
     # add function Base.show
