@@ -19,7 +19,7 @@ function error_usage(__source__, problem=nothing)
     if isnothing(problem)
         problem = ""
     end
-    error("$(__source__.file):$(__source__.line): $problem  Usage:\n\n$(@doc AutoHashEquals.@auto_hash_equals)")
+    error("$(__source__.file):$(__source__.line): $problem  Usage:\n\n$USAGE")
 end
 
 # `_show_default_auto_hash_equals_cached` is just like `Base._show_default(io, x)`,

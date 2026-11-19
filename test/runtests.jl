@@ -122,6 +122,13 @@ include("cache_conversion.jl")
 
         @testset "misuse of the macro" begin
             @test_throws Exception @eval @auto_hash_equals a struct T34 end
+            msg = try
+                @eval @auto_hash_equals 5
+            catch e
+                sprint(showerror, e)
+            end
+            @test occursin("Usage:\n\n    @auto_hash_equals [options] struct Foo ... end", msg)
+            @test !occursin("DocStr", msg)
         end
 
         @testset "invalid type name 1" begin
