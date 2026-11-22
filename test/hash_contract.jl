@@ -65,7 +65,8 @@ end
         B{Int}, Any, Union{Int,String}, Union{}, Union, E, Tuple{},
         Tuple{String}, Tuple{String,Int}, NamedTuple{(:a,:b),Tuple{Int,String}},
         NamedTuple{(:a,:b),Tuple{String,Int}}, NTuple{3,Int}, Val{1}, Val{:x},
-        Val{:a}, Val{(1,:a)}, Val{(1,:x)}, NTuple, Tuple,
+        Val{:a}, Val{(1,:a)}, Val{(1,:x)}, Val{(a=1, b=:x)}, Val{(b=1, a=:x)},
+        Val{(a=1, b=:y)}, NTuple, Tuple,
         SeedFirst.Box{Int}, SeedSecond.Box{Int},
     ])
     @test length(unique(type_seed.(types))) == length(types)
@@ -78,8 +79,8 @@ end
     @test type_seed(Tuple{}) == type_seed(NTuple{0,Int})
     @test type_seed(Tuple{String}) == type_seed(NTuple{1,String})
     @test type_seed(Union{Int,String}) == type_seed(Union{String,Int})
-    @test type_seed(NTuple) === 0x789db08b2c84bf6c
-    @test type_seed(Tuple) === 0x571b7e681184913a
+    @test type_seed(NTuple) === 0x789db08b2c84bf6c % UInt
+    @test type_seed(Tuple) === 0x571b7e681184913a % UInt
 end
 
 @testset "cache=true keeps == field-by-field" begin
