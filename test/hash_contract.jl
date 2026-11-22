@@ -65,7 +65,8 @@ end
         B{Int}, Any, Union{Int,String}, Union{}, Union, E, Tuple{},
         Tuple{String}, Tuple{String,Int}, NamedTuple{(:a,:b),Tuple{Int,String}},
         NamedTuple{(:a,:b),Tuple{String,Int}}, NTuple{3,Int}, Val{1}, Val{:x},
-        Val{:a}, Val{(1,:a)}, Val{(1,:x)}, NTuple, Tuple,
+        Val{:a}, Val{(1,:a)}, Val{(1,:x)}, Val{(a=1, b=:x)}, Val{(b=1, a=:x)},
+        Val{(a=1, b=:y)}, NTuple, Tuple,
         SeedFirst.Box{Int}, SeedSecond.Box{Int},
     ])
     @test length(unique(type_seed.(types))) == length(types)
